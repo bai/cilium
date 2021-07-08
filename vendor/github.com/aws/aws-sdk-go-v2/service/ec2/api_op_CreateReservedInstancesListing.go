@@ -29,7 +29,7 @@ import (
 // can use the DescribeReservedInstancesListings operation. For more information,
 // see Reserved Instance Marketplace
 // (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ri-market-general.html) in
-// the Amazon Elastic Compute Cloud User Guide.
+// the Amazon EC2 User Guide.
 func (c *Client) CreateReservedInstancesListing(ctx context.Context, params *CreateReservedInstancesListingInput, optFns ...func(*Options)) (*CreateReservedInstancesListingOutput, error) {
 	if params == nil {
 		params = &CreateReservedInstancesListingInput{}
@@ -62,7 +62,7 @@ type CreateReservedInstancesListingInput struct {
 	// in this call.
 	//
 	// This member is required.
-	InstanceCount int32
+	InstanceCount *int32
 
 	// A list specifying the price of the Standard Reserved Instance for each month
 	// remaining in the Reserved Instance term.

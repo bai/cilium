@@ -1,4 +1,5 @@
 go.sum linguist-generated
 examples/kubernetes/connectivity-check/connectivity-*.yaml linguist-generated
-examples/crds/*.yaml linguist-generated
+pkg/k8s/apis/cilium.io/v2/client/crds/*.yaml linguist-generated
 Documentation/cmdref/** linguist-generated
+Documentation/helm-values.rst linguist-generated

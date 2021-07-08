@@ -136,6 +136,7 @@ have it scrape all Hubble metrics from the endpoints automatically:
 
     scrape_configs:
       - job_name: 'kubernetes-endpoints'
+        scrape_interval: 30s
         kubernetes_sd_configs:
           - role: endpoints
         relabel_configs:
@@ -163,7 +164,7 @@ It will run Prometheus and Grafana in the ``cilium-monitoring`` namespace. If
 you have either enabled Cilium or Hubble metrics, they will automatically
 be scraped by Prometheus. You can then expose Grafana to access it via your browser.
 
-.. code:: bash
+.. code-block:: shell-session
 
     kubectl -n cilium-monitoring port-forward service/grafana --address 0.0.0.0 --address :: 3000:3000
 
@@ -205,6 +206,17 @@ Services
 Name                                       Labels                                             Description
 ========================================== ================================================== ========================================================
 ``services_events_total``                                                                     Number of services events labeled by action type
+========================================== ================================================== ========================================================
+
+Cluster health
+~~~~~~~~~~~~~~
+
+========================================== ================================================== ========================================================
+Name                                       Labels                                             Description
+========================================== ================================================== ========================================================
+``unreachable_nodes``                                                                         Number of nodes that cannot be reached
+``unreachable_health_endpoints``                                                              Number of health endpoints that cannot be reached
+``controllers_failing``                                                                       Number of failing controllers
 ========================================== ================================================== ========================================================
 
 Datapath
@@ -331,6 +343,7 @@ IPAM
 Name                                     Labels                                       Description
 ======================================== ============================================ ========================================================
 ``ipam_events_total``                                                                 Number of IPAM events received labeled by action and datapath family type
+``ip_addresses``                         ``family``                                   Number of allocated IP addresses
 ======================================== ============================================ ========================================================
 
 KVstore

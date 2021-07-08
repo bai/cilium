@@ -27,20 +27,20 @@ import (
 // (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-system-instance-status-check.html)
 // and Troubleshooting instances with failed status checks
 // (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/TroubleshootingInstances.html)
-// in the Amazon Elastic Compute Cloud User Guide.
+// in the Amazon EC2 User Guide.
 //
-// * Scheduled events - Amazon EC2
-// can schedule events (such as reboot, stop, or terminate) for your instances
-// related to hardware issues, software updates, or system maintenance. For more
-// information, see Scheduled events for your instances
+// * Scheduled events - Amazon EC2 can schedule
+// events (such as reboot, stop, or terminate) for your instances related to
+// hardware issues, software updates, or system maintenance. For more information,
+// see Scheduled events for your instances
 // (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/monitoring-instances-status-check_sched.html)
-// in the Amazon Elastic Compute Cloud User Guide.
+// in the Amazon EC2 User Guide.
 //
-// * Instance state - You can
-// manage your instances from the moment you launch them through their termination.
-// For more information, see Instance lifecycle
+// * Instance state - You can manage your instances
+// from the moment you launch them through their termination. For more information,
+// see Instance lifecycle
 // (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-lifecycle.html)
-// in the Amazon Elastic Compute Cloud User Guide.
+// in the Amazon EC2 User Guide.
 func (c *Client) DescribeInstanceStatus(ctx context.Context, params *DescribeInstanceStatusInput, optFns ...func(*Options)) (*DescribeInstanceStatusOutput, error) {
 	if params == nil {
 		params = &DescribeInstanceStatusInput{}
@@ -62,7 +62,7 @@ type DescribeInstanceStatusInput struct {
 	// actually making the request, and provides an error response. If you have the
 	// required permissions, the error response is DryRunOperation. Otherwise, it is
 	// UnauthorizedOperation.
-	DryRun bool
+	DryRun *bool
 
 	// The filters.
 	//
@@ -117,7 +117,7 @@ type DescribeInstanceStatusInput struct {
 
 	// When true, includes the health status for all instances. When false, includes
 	// the health status for running instances only. Default: false
-	IncludeAllInstances bool
+	IncludeAllInstances *bool
 
 	// The instance IDs. Default: Describes all your instances. Constraints: Maximum
 	// 100 explicitly specified instance IDs.
@@ -127,7 +127,7 @@ type DescribeInstanceStatusInput struct {
 	// remaining results, make another call with the returned NextToken value. This
 	// value can be between 5 and 1000. You cannot specify this parameter and the
 	// instance IDs parameter in the same call.
-	MaxResults int32
+	MaxResults *int32
 
 	// The token to retrieve the next page of results.
 	NextToken *string
@@ -239,17 +239,17 @@ type DescribeInstanceStatusPaginator struct {
 
 // NewDescribeInstanceStatusPaginator returns a new DescribeInstanceStatusPaginator
 func NewDescribeInstanceStatusPaginator(client DescribeInstanceStatusAPIClient, params *DescribeInstanceStatusInput, optFns ...func(*DescribeInstanceStatusPaginatorOptions)) *DescribeInstanceStatusPaginator {
+	if params == nil {
+		params = &DescribeInstanceStatusInput{}
+	}
+
 	options := DescribeInstanceStatusPaginatorOptions{}
-	if params.MaxResults != 0 {
-		options.Limit = params.MaxResults
+	if params.MaxResults != nil {
+		options.Limit = *params.MaxResults
 	}
 
 	for _, fn := range optFns {
 		fn(&options)
-	}
-
-	if params == nil {
-		params = &DescribeInstanceStatusInput{}
 	}
 
 	return &DescribeInstanceStatusPaginator{
@@ -274,7 +274,11 @@ func (p *DescribeInstanceStatusPaginator) NextPage(ctx context.Context, optFns .
 	params := *p.params
 	params.NextToken = p.nextToken
 
-	params.MaxResults = p.options.Limit
+	var limit *int32
+	if p.options.Limit > 0 {
+		limit = &p.options.Limit
+	}
+	params.MaxResults = limit
 
 	result, err := p.client.DescribeInstanceStatus(ctx, &params, optFns...)
 	if err != nil {
@@ -431,16 +435,21 @@ func systemStatusOkStateRetryable(ctx context.Context, input *DescribeInstanceSt
 
 		expectedValue := "ok"
 		var match = true
-		listOfValues, ok := pathValue.([]string)
+		listOfValues, ok := pathValue.([]interface{})
 		if !ok {
-			return false, fmt.Errorf("waiter comparator expected []string value got %T", pathValue)
+			return false, fmt.Errorf("waiter comparator expected list got %T", pathValue)
 		}
 
 		if len(listOfValues) == 0 {
 			match = false
 		}
 		for _, v := range listOfValues {
-			if v != expectedValue {
+			value, ok := v.(types.SummaryStatus)
+			if !ok {
+				return false, fmt.Errorf("waiter comparator expected types.SummaryStatus value, got %T", pathValue)
+			}
+
+			if string(value) != expectedValue {
 				match = false
 			}
 		}

@@ -120,7 +120,7 @@ func NewEndpointFromChangeModel(ctx context.Context, owner regeneration.Owner, p
 		ep.OpLabels.OrchestrationInfo = infoLabels
 	}
 
-	ep.setState(string(base.State), "Endpoint creation")
+	ep.setState(State(base.State), "Endpoint creation")
 
 	return ep, nil
 }
@@ -525,7 +525,7 @@ func (e *Endpoint) ProcessChangeRequest(newEp *Endpoint, validPatchTransitionSta
 
 	// If desired state is waiting-for-identity but identity is already
 	// known, bump it to ready state immediately to force re-generation
-	if e.getState() == StateWaitingForIdentity && e.SecurityIdentity != nil {
+	if newEp.state == StateWaitingForIdentity && e.SecurityIdentity != nil {
 		e.setState(StateReady, "Preparing to force endpoint regeneration because identity is known while handling API PATCH")
 		changed = true
 	}

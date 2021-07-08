@@ -43,7 +43,7 @@ type DescribeVolumesModificationsInput struct {
 	// actually making the request, and provides an error response. If you have the
 	// required permissions, the error response is DryRunOperation. Otherwise, it is
 	// UnauthorizedOperation.
-	DryRun bool
+	DryRun *bool
 
 	// The filters.
 	//
@@ -82,7 +82,7 @@ type DescribeVolumesModificationsInput struct {
 
 	// The maximum number of results (up to a limit of 500) to be returned in a
 	// paginated request.
-	MaxResults int32
+	MaxResults *int32
 
 	// The nextToken value returned by a previous paginated request.
 	NextToken *string
@@ -196,17 +196,17 @@ type DescribeVolumesModificationsPaginator struct {
 // NewDescribeVolumesModificationsPaginator returns a new
 // DescribeVolumesModificationsPaginator
 func NewDescribeVolumesModificationsPaginator(client DescribeVolumesModificationsAPIClient, params *DescribeVolumesModificationsInput, optFns ...func(*DescribeVolumesModificationsPaginatorOptions)) *DescribeVolumesModificationsPaginator {
+	if params == nil {
+		params = &DescribeVolumesModificationsInput{}
+	}
+
 	options := DescribeVolumesModificationsPaginatorOptions{}
-	if params.MaxResults != 0 {
-		options.Limit = params.MaxResults
+	if params.MaxResults != nil {
+		options.Limit = *params.MaxResults
 	}
 
 	for _, fn := range optFns {
 		fn(&options)
-	}
-
-	if params == nil {
-		params = &DescribeVolumesModificationsInput{}
 	}
 
 	return &DescribeVolumesModificationsPaginator{
@@ -231,7 +231,11 @@ func (p *DescribeVolumesModificationsPaginator) NextPage(ctx context.Context, op
 	params := *p.params
 	params.NextToken = p.nextToken
 
-	params.MaxResults = p.options.Limit
+	var limit *int32
+	if p.options.Limit > 0 {
+		limit = &p.options.Limit
+	}
+	params.MaxResults = limit
 
 	result, err := p.client.DescribeVolumesModifications(ctx, &params, optFns...)
 	if err != nil {

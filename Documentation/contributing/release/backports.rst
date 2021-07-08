@@ -26,6 +26,7 @@ minor version of Cilium, for example in a ``v1.2.z`` release prior to the
 release of version ``v1.3.0``:
 
 - All bugfixes
+- Debug tool improvements
 
 Backport Criteria for X.Y-1.Z and X.Y-2.Z
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -36,7 +37,27 @@ the release of version ``v1.3.0``:
 
 - Security relevant fixes
 - Major bugfixes relevant to the correct operation of Cilium
+- Debug tool improvements
 
+Backport Criteria for documentation changes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Changes to Cilium's documentation should generally be subject to backports for
+all supported branches to which they apply (all supported branches containing
+the parent features to which the modified sections relate).
+
+The motivation is that users can then simply look at the branch of the
+documentation related to the version they are deploying, and find the latest
+correct instructions for their version.
+
+Proposing PRs for backporting
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+PRs are proposed for backporting by adding a ``needs-backport/X.Y`` label to
+them. Normally this is done by the author when the PR is created or one of the
+maintainers when the PR is reviewed. When proposing PRs that have already been
+merged, also add a comment to the PR to ensure that the backporters are
+notified.
 
 Backporting Guide for the Backporter
 ------------------------------------
@@ -55,19 +76,20 @@ process for backporting these PRs:
 One-time Setup
 ~~~~~~~~~~~~~~
 
-#. The scripts referred to below need to be run on Linux, they do not
-   work on macOS. You can use the cilium dev VM for this, but you need
-   to configure git to have your name and email address to be used in
-   the commit messages:
+#. The scripts referred to below need to be run on Linux, they do not work on
+   macOS. It is recommended to use the dev VM (``contrib/vagrant/start.sh``),
+   as it will have all the correct versions of dependencies / libraries. Once
+   you have a machine ready, you need to configure git to have your name and
+   email address to be used in the commit messages:
 
-   .. code-block:: bash
+   .. code-block:: shell-session
 
       $ git config --global user.name "John Doe"
       $ git config --global user.email johndoe@example.com
 
 #. Add remotes for the Cilium upstream repository and your Cilium repository fork.
 
-   .. code-block:: bash
+   .. code-block:: shell-session
 
       $ git remote add johndoe git@github.com:johndoe/cilium.git
       $ git remote add upstream https://github.com/cilium/cilium.git
@@ -91,16 +113,16 @@ One-time Setup
    +--------------------------------------------------------------+-----------+---------------------------------------------------------+
    | jq                                                           | Yes       | N/A (OS-specific)                                       |
    +--------------------------------------------------------------+-----------+---------------------------------------------------------+
-   | python3                                                      | No        | `Python Downloads <https://www.python.org/downloads/>`_ |
+   | python3                                                      | Yes       | `Python Downloads <https://www.python.org/downloads/>`_ |
    +--------------------------------------------------------------+-----------+---------------------------------------------------------+
-   | `PyGithub <https://pypi.org/project/PyGithub/>`_             | No        | ``pip3 install PyGithub``                               |
+   | `PyGithub <https://pypi.org/project/PyGithub/>`_             | Yes       | ``pip3 install PyGithub``                               |
    +--------------------------------------------------------------+-----------+---------------------------------------------------------+
-   | `Github hub CLI (>= 2.8.3) <https://github.com/github/hub>`_ | No        | N/A (OS-specific)                                       |
+   | `Github hub CLI (>= 2.8.3) <https://github.com/github/hub>`_ | Yes       | N/A (OS-specific)                                       |
    +--------------------------------------------------------------+-----------+---------------------------------------------------------+
 
    Verify your machine is correctly configured by running
 
-   .. code-block:: bash
+   .. code-block:: shell-session
 
       $ go run ./tools/dev-doctor --backporting
 
@@ -123,13 +145,19 @@ and if so, change the label to ``backport-done/X.Y``.
 Creating the Backports Branch
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+#. Check whether there are any `outstanding backport PRs for the target branch
+   <https://github.com/cilium/cilium/pulls?q=is%3Aopen+is%3Apr+label%3Akind%2Fbackports>`__.
+   If there are already backports for that branch, create a thread in the
+   #launchpad channel in Slack and reach out to the author to coordinate
+   triage, review and merge of the existing PR into the target branch.
+
 #. Run ``contrib/backporting/start-backport`` for the release version that
    you intend to backport PRs for. This will pull the latest repository commits
    from the Cilium repository (assumed to be the git remote ``origin``), create
    a new branch, and runs the ``contrib/backporting/check-stable`` script to
    fetch the full set of PRs to backport.
 
-   .. code-block:: bash
+   .. code-block:: shell-session
 
       $ GITHUB_TOKEN=xxx contrib/backporting/start-backport 1.0
 
@@ -149,7 +177,7 @@ Creating the Backports Branch
    specified on the command line until one cherry pick fails or every
    commit is cherry-picked.
 
-   .. code-block:: bash
+   .. code-block:: shell-session
 
       $ contrib/backporting/cherry-pick <oldest-commit-sha>
       ...
@@ -166,7 +194,32 @@ Creating the Backports Branch
    the changes made in the commit message and collect these to add to the
    backport PR description when creating the PR below. This helps to direct
    backport reviewers towards which changes may deviate from the original
-   commits to ensure that the changes are correctly backported.
+   commits to ensure that the changes are correctly backported. This can be
+   fairly simple, for example inside the commit message of the modified commit::
+
+       commit f0f09158ae7f84fc8d888605aa975ce3421e8d67
+       Author: Joe Stringer <joe@cilium.io>
+       Date:   Tue Apr 20 16:48:18 2021 -0700
+
+           contrib: Automate digest PR creation
+
+           [ upstream commit 893d0e7ec5766c03da2f0e7b8c548f7c4d89fcd7 ]
+
+           [ Backporter's notes: Dropped conflicts in .github/ issue template ]
+
+           There's still some interactive bits here just for safety, but one less
+           step in the template.
+
+           Signed-off-by: Joe Stringer <joe@cilium.io>
+
+   **It is the backporter's responsibility to check that the backport commits
+   they are preparing are identical to the original commits**. This can be
+   achieved by preparing the commits, then running ``git show <commit>`` for
+   both the original upstream commit and the prepared backport, and read
+   through the commits side-by-side, line-by-line to check that the changes are
+   the same. If there is any uncertainty about the backport, reach out to the
+   original author directly to coordinate how to prepare the backport for the
+   target branch.
 
 #. (Optional) If there are any commits or pull requests that are tricky or
    time-consuming to backport, consider reaching out for help on Slack. If the
@@ -187,13 +240,11 @@ section above. It pushes the git tree, creates the pull request and updates
 the labels for the PRs that are backported, based on the
 ``vRELEASE-backport-YYYY-MM-DD.txt`` file in the current directory.
 
-   .. code-block:: bash
+   .. code-block:: shell-session
 
       $ GITHUB_TOKEN=xxx contrib/backporting/submit-backport
 
-The script takes up to three positional arguments:
-
-   .. code-block:: bash
+The script takes up to three positional arguments::
 
       usage: submit-backport [branch version] [pr-summary] [your remote]
 
@@ -210,7 +261,7 @@ Via GitHub Web Interface
 
 #. Push your backports branch to your fork of the Cilium repo.
 
-   .. code-block:: bash
+   .. code-block:: shell-session
 
       $ git push -u <remote_for_your_fork> HEAD
 
@@ -264,7 +315,7 @@ and clear the ``backport-pending/X.Y`` label(s). If the backport pull request
 description was generated using the scripts above, then the full command is
 listed in the pull request description.
 
-.. code-block:: bash
+.. code-block:: shell-session
 
    $ GITHUB_TOKEN=xxx for pr in 12589 12568; do contrib/backporting/set-labels.py $pr done 1.8; done
 
@@ -291,6 +342,6 @@ Merger
 When merging a backport PR, set the labels of the backported PRs to
 ``done``. Typically, backport PRs include a line on how do that. E.g.,:
 
-.. code-block:: bash
+.. code-block:: shell-session
 
     $ GITHUB_TOKEN=xxx for pr in 12894 12621 12973 12977 12952; do contrib/backporting/set-labels.py $pr done 1.8; done

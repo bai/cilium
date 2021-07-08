@@ -40,11 +40,11 @@ type GetAssociatedIpv6PoolCidrsInput struct {
 	// actually making the request, and provides an error response. If you have the
 	// required permissions, the error response is DryRunOperation. Otherwise, it is
 	// UnauthorizedOperation.
-	DryRun bool
+	DryRun *bool
 
 	// The maximum number of results to return with a single call. To retrieve the
 	// remaining results, make another call with the returned nextToken value.
-	MaxResults int32
+	MaxResults *int32
 
 	// The token for the next page of results.
 	NextToken *string
@@ -159,17 +159,17 @@ type GetAssociatedIpv6PoolCidrsPaginator struct {
 // NewGetAssociatedIpv6PoolCidrsPaginator returns a new
 // GetAssociatedIpv6PoolCidrsPaginator
 func NewGetAssociatedIpv6PoolCidrsPaginator(client GetAssociatedIpv6PoolCidrsAPIClient, params *GetAssociatedIpv6PoolCidrsInput, optFns ...func(*GetAssociatedIpv6PoolCidrsPaginatorOptions)) *GetAssociatedIpv6PoolCidrsPaginator {
+	if params == nil {
+		params = &GetAssociatedIpv6PoolCidrsInput{}
+	}
+
 	options := GetAssociatedIpv6PoolCidrsPaginatorOptions{}
-	if params.MaxResults != 0 {
-		options.Limit = params.MaxResults
+	if params.MaxResults != nil {
+		options.Limit = *params.MaxResults
 	}
 
 	for _, fn := range optFns {
 		fn(&options)
-	}
-
-	if params == nil {
-		params = &GetAssociatedIpv6PoolCidrsInput{}
 	}
 
 	return &GetAssociatedIpv6PoolCidrsPaginator{
@@ -194,7 +194,11 @@ func (p *GetAssociatedIpv6PoolCidrsPaginator) NextPage(ctx context.Context, optF
 	params := *p.params
 	params.NextToken = p.nextToken
 
-	params.MaxResults = p.options.Limit
+	var limit *int32
+	if p.options.Limit > 0 {
+		limit = &p.options.Limit
+	}
+	params.MaxResults = limit
 
 	result, err := p.client.GetAssociatedIpv6PoolCidrs(ctx, &params, optFns...)
 	if err != nil {

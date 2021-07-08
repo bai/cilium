@@ -29,6 +29,7 @@ import (
 	poolTypes "github.com/cilium/cilium/pkg/hubble/relay/pool/types"
 	"github.com/cilium/cilium/pkg/identity"
 	"github.com/cilium/cilium/pkg/ipcache"
+	slim_corev1 "github.com/cilium/cilium/pkg/k8s/slim/k8s/api/core/v1"
 	"github.com/cilium/cilium/pkg/labels"
 	"github.com/cilium/cilium/pkg/policy"
 
@@ -52,12 +53,29 @@ func (s *FakeGetFlowsServer) Send(response *observerpb.GetFlowsResponse) error {
 	panic("OnSend not set")
 }
 
+// FakeGetAgentEventsServer is used for unit tests and implements the
+// observerpb.Observer_GetAgentEventsServer interface.
+type FakeGetAgentEventsServer struct {
+	OnSend func(response *observerpb.GetAgentEventsResponse) error
+	*FakeGRPCServerStream
+}
+
+// Send implements observerpb.Observer_GetAgentEventsServer.Send.
+func (s *FakeGetAgentEventsServer) Send(response *observerpb.GetAgentEventsResponse) error {
+	if s.OnSend != nil {
+		return s.OnSend(response)
+	}
+	panic("OnSend not set")
+}
+
 // FakeObserverClient is used for unit tests and implements the
 // observerpb.ObserverClient interface.
 type FakeObserverClient struct {
-	OnGetFlows     func(ctx context.Context, in *observerpb.GetFlowsRequest, opts ...grpc.CallOption) (observerpb.Observer_GetFlowsClient, error)
-	OnGetNodes     func(ctx context.Context, in *observerpb.GetNodesRequest, opts ...grpc.CallOption) (*observerpb.GetNodesResponse, error)
-	OnServerStatus func(ctx context.Context, in *observerpb.ServerStatusRequest, opts ...grpc.CallOption) (*observerpb.ServerStatusResponse, error)
+	OnGetFlows       func(ctx context.Context, in *observerpb.GetFlowsRequest, opts ...grpc.CallOption) (observerpb.Observer_GetFlowsClient, error)
+	OnGetAgentEvents func(ctx context.Context, in *observerpb.GetAgentEventsRequest, opts ...grpc.CallOption) (observerpb.Observer_GetAgentEventsClient, error)
+	OnGetDebugEvents func(ctx context.Context, in *observerpb.GetDebugEventsRequest, opts ...grpc.CallOption) (observerpb.Observer_GetDebugEventsClient, error)
+	OnGetNodes       func(ctx context.Context, in *observerpb.GetNodesRequest, opts ...grpc.CallOption) (*observerpb.GetNodesResponse, error)
+	OnServerStatus   func(ctx context.Context, in *observerpb.ServerStatusRequest, opts ...grpc.CallOption) (*observerpb.ServerStatusResponse, error)
 }
 
 // GetFlows implements observerpb.ObserverClient.GetFlows.
@@ -66,6 +84,22 @@ func (c *FakeObserverClient) GetFlows(ctx context.Context, in *observerpb.GetFlo
 		return c.OnGetFlows(ctx, in, opts...)
 	}
 	panic("OnGetFlows not set")
+}
+
+// GetAgentEvents implements observerpb.ObserverClient.GetAgentEvents.
+func (c *FakeObserverClient) GetAgentEvents(ctx context.Context, in *observerpb.GetAgentEventsRequest, opts ...grpc.CallOption) (observerpb.Observer_GetAgentEventsClient, error) {
+	if c.OnGetAgentEvents != nil {
+		return c.OnGetAgentEvents(ctx, in, opts...)
+	}
+	panic("OnGetAgentEvents not set")
+}
+
+// GetDebugEvents implements observerpb.ObserverClient.GetDebugEvents.
+func (c *FakeObserverClient) GetDebugEvents(ctx context.Context, in *observerpb.GetDebugEventsRequest, opts ...grpc.CallOption) (observerpb.Observer_GetDebugEventsClient, error) {
+	if c.OnGetDebugEvents != nil {
+		return c.OnGetDebugEvents(ctx, in, opts...)
+	}
+	panic("OnGetDebugEvents not set")
 }
 
 // GetNodes implements observerpb.ObserverClient.GetNodes.
@@ -386,6 +420,7 @@ type FakeEndpointInfo struct {
 	PodName      string
 	PodNamespace string
 	Labels       []string
+	Pod          *slim_corev1.Pod
 
 	PolicyMap      map[policy.Key]labels.LabelArrayList
 	PolicyRevision uint64
@@ -414,6 +449,11 @@ func (e *FakeEndpointInfo) GetK8sNamespace() string {
 // GetLabels returns the labels of the endpoint.
 func (e *FakeEndpointInfo) GetLabels() []string {
 	return e.Labels
+}
+
+// GetPod return the pod object of the endpoint.
+func (e *FakeEndpointInfo) GetPod() *slim_corev1.Pod {
+	return e.Pod
 }
 
 func (e *FakeEndpointInfo) GetRealizedPolicyRuleLabelsForKey(key policy.Key) (

@@ -92,6 +92,10 @@ type CompileTimeConfiguration interface {
 
 	// IsHost returns true if the endpoint is the host endpoint.
 	IsHost() bool
+
+	// DisableSIPVerification returns true if the endpoint wishes to skip
+	// source IP verification
+	DisableSIPVerification() bool
 }
 
 // EndpointConfiguration provides datapath implementations a clean interface
@@ -128,7 +132,7 @@ type ConfigWriter interface {
 // should not be SNAT'd.
 func RemoteSNATDstAddrExclusionCIDRv4() *cidr.CIDR {
 	if c := option.Config.IPv4NativeRoutingCIDR(); c != nil {
-		// native-routing-cidr is set, so use it
+		// ipv4-native-routing-cidr is set, so use it
 		return c
 	}
 

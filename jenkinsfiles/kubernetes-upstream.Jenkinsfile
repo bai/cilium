@@ -9,22 +9,9 @@ pipeline {
         PROJ_PATH = "src/github.com/cilium/cilium"
         TESTDIR="${WORKSPACE}/${PROJ_PATH}/test"
         VM_MEMORY = "5120"
-        K8S_VERSION="1.20"
+        K8S_VERSION="1.21"
         KERNEL="419"
         SERVER_BOX = "cilium/ubuntu-4-19"
-        CNI_INTEGRATION=setIfLabel("integration/cni-flannel", "FLANNEL", "")
-        RACE="""${sh(
-                returnStdout: true,
-                script: 'if [ "${run_with_race_detection}" = "" ]; then echo -n ""; else echo -n "1"; fi'
-            )}"""
-        LOCKDEBUG="""${sh(
-                returnStdout: true,
-                script: 'if [ "${run_with_race_detection}" = "" ]; then echo -n ""; else echo -n "1"; fi'
-            )}"""
-        BASE_IMAGE="""${sh(
-                returnStdout: true,
-                script: 'if [ "${run_with_race_detection}" = "" ]; then echo -n "scratch"; else echo -n "quay.io/cilium/cilium-runtime:7f84e5f2c9027e75b271a460d83c086f29127d3a@sha256:a1d73d2840b4b075ade33bd8f968ca6db3d9bca9f3ed14f168d14526b3208cc0"; fi'
-            )}"""
     }
 
     options {
@@ -48,9 +35,9 @@ pipeline {
             steps {
                 sh 'env'
                 Status("PENDING", "${env.JOB_NAME}")
-                sh 'rm -rf src; mkdir -p src/github.com/cilium'
-                sh 'ln -s $WORKSPACE src/github.com/cilium/cilium'
                 checkout scm
+                sh 'mkdir -p ${PROJ_PATH}'
+                sh 'ls -A | grep -v src | xargs mv -t ${PROJ_PATH}'
                 sh '/usr/local/bin/cleanup || true'
             }
         }
@@ -61,6 +48,12 @@ pipeline {
                         env.DOCKER_TAG = env.ghprbActualCommit
                     } else {
                         env.DOCKER_TAG = env.GIT_COMMIT
+                    }
+                    if (env.run_with_race_detection?.trim()) {
+                        env.DOCKER_TAG = env.DOCKER_TAG + "-race"
+                        env.RACE = 1
+                        env.LOCKDEBUG = 1
+                        env.BASE_IMAGE = "quay.io/cilium/cilium-runtime:28b5a8658b596d12d80b0e7dad3efc2e77ec2d65@sha256:fbf8eee141101fade247dbe94cf84ca3bdcd92b96108996c50859ab7edd607d0"
                     }
                 }
             }
@@ -94,7 +87,7 @@ pipeline {
             }
 
             steps {
-                sh 'cd ${TESTDIR}; vagrant ssh k8s1-${K8S_VERSION} -c "cd /home/vagrant/go/${PROJ_PATH}; ./test/kubernetes-test.sh ${DOCKER_TAG}"'
+                sh 'cd ${TESTDIR}; vagrant ssh k8s1-${K8S_VERSION} -c "cd /home/vagrant/go/${PROJ_PATH}; sudo ./test/kubernetes-test.sh ${DOCKER_TAG}"'
             }
         }
 

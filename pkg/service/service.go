@@ -194,14 +194,6 @@ func (s *Service) InitMaps(ipv6, ipv4, sockMaps, restore bool) error {
 	s.Lock()
 	defer s.Unlock()
 
-	// The following two calls can be removed in v1.8+.
-	if err := bpf.UnpinMapIfExists("cilium_lb6_rr_seq_v2"); err != nil {
-		return nil
-	}
-	if err := bpf.UnpinMapIfExists("cilium_lb4_rr_seq_v2"); err != nil {
-		return nil
-	}
-
 	toOpen := []*bpf.Map{}
 	toDelete := []*bpf.Map{}
 	if ipv6 {
@@ -271,18 +263,14 @@ func (s *Service) UpsertService(params *lb.SVC) (bool, lb.ID, error) {
 			option.EnableSVCSourceRangeCheck)
 	}
 
-	// In case we do DSR + IPIP, then it's required that the backends use
-	// the same destination port as the frontend service.
-	if option.Config.NodePortMode == option.NodePortModeDSR &&
-		option.Config.LoadBalancerDSRDispatch == option.DSRDispatchIPIP &&
-		params.Type != lb.SVCTypeClusterIP {
-		for _, b := range params.Backends {
-			if b.Port != params.Frontend.L3n4Addr.Port {
-				err := fmt.Errorf("Unable to upsert service due to frontend/backend port mismatch under DSR with IPIP: %d vs %d",
-					params.Frontend.L3n4Addr.Port, b.Port)
-				return false, lb.ID(0), err
-			}
-		}
+	ipv6Svc := params.Frontend.IsIPv6()
+	if ipv6Svc && !option.Config.EnableIPv6 {
+		err := fmt.Errorf("Unable to upsert service %s as IPv6 is disabled", params.Frontend.L3n4Addr.String())
+		return false, lb.ID(0), err
+	}
+	if !ipv6Svc && !option.Config.EnableIPv4 {
+		err := fmt.Errorf("Unable to upsert service %s as IPv4 is disabled", params.Frontend.L3n4Addr.String())
+		return false, lb.ID(0), err
 	}
 
 	// If needed, create svcInfo and allocate service ID

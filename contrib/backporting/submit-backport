@@ -28,7 +28,7 @@ fi
 
 BRANCH="${1:-}"
 if [ "$BRANCH" = "" ]; then
-    BRANCH=$(git symbolic-ref --short HEAD | sed 's/.*\(v[0-9]\.[0-9]\).*/\1/')
+    BRANCH=$(git symbolic-ref --short HEAD | sed 's/.*\(v[0-9]\+\.[0-9]\+\).*/\1/')
 fi
 BRANCH=$(echo "$BRANCH" | sed 's/^v//')
 
@@ -37,16 +37,7 @@ if [ "$SUMMARY" = "" ]; then
     SUMMARY="v$BRANCH-backport-$(date --rfc-3339=date).txt"
 fi
 
-USER_REMOTE=${3:-}
-if [ "$USER_REMOTE" = "" ]; then
-    gh_username=$(hub api user --flat | awk '/.login/ {print $2}')
-    if [ "$gh_username" = "" ]; then
-        echo "Error: could not get user info from hub" 1>&2
-        exit 1
-    fi
-    USER_REMOTE=$(get_remote "$gh_username")
-    echo "Using GitHub repository ${gh_username}/cilium (git remote: ${USER_REMOTE})"
-fi
+USER_REMOTE=$(get_user_remote ${3:-})
 
 UPSTREAM_REMOTE=$(get_remote)
 if ! git branch -a | grep -q "${UPSTREAM_REMOTE}/v${BRANCH}$" || [ ! -e "$SUMMARY" ]; then
@@ -56,13 +47,15 @@ if ! git branch -a | grep -q "${UPSTREAM_REMOTE}/v${BRANCH}$" || [ ! -e "$SUMMAR
     echo "(branch version: ${BRANCH}, pr-summary: ${SUMMARY}, upstream remote: ${UPSTREAM_REMOTE})" 1>&2
     exit 1
 fi
+AUTHORS="$(grep -ho "@[^)]*" "$SUMMARY" | sort -u | tr '\n' ',' | sed -e 's/@//g' -e 's/,$//')"
 
 echo -e "Sending PR for branch v$BRANCH:\n" 1>&2
 cat $SUMMARY 1>&2
 echo -e "\nSending pull request..." 2>&1
 PR_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-git push "$USER_REMOTE" "$PR_BRANCH"
-hub pull-request -b "v$BRANCH" -l kind/backports,backport/$BRANCH -F $SUMMARY
+git config --local "branch.${PR_BRANCH}.remote" "$USER_REMOTE"
+git push -q "$USER_REMOTE" "$PR_BRANCH"
+hub pull-request -b "v$BRANCH" -l kind/backports,backport/$BRANCH -F $SUMMARY -r $AUTHORS
 
 prs=$(grep "contrib/backporting/set-labels.py" $SUMMARY | sed -e 's/^.*for pr in \([0-9 ]\+\);.*$/\1/g')
 echo -e "\nUpdating labels for PRs $prs\n" 2>&1

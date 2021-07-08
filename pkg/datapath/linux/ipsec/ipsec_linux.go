@@ -66,10 +66,9 @@ func getIPSecKeys(ip net.IP) *ipSecKey {
 
 func ipSecNewState() *netlink.XfrmState {
 	state := netlink.XfrmState{
-		Mode:         netlink.XFRM_MODE_TUNNEL,
-		Proto:        netlink.XFRM_PROTO_ESP,
-		ESN:          true,
-		ReplayWindow: 1024,
+		Mode:  netlink.XFRM_MODE_TUNNEL,
+		Proto: netlink.XFRM_PROTO_ESP,
+		ESN:   false,
 	}
 	return &state
 }
@@ -156,7 +155,7 @@ func ipSecReplaceStateOut(remoteIP, localIP net.IP) (uint8, error) {
 	return key.Spi, netlink.XfrmStateAdd(state)
 }
 
-func _ipSecReplacePolicyInFwd(src, dst, tmplSrc, tmplDst *net.IPNet, dir netlink.Dir) error {
+func _ipSecReplacePolicyInFwd(src, dst, tmplSrc, tmplDst *net.IPNet, tunnel bool, dir netlink.Dir) error {
 	optional := int(0)
 	key := getIPSecKeys(dst.IP)
 	if key == nil {
@@ -169,8 +168,18 @@ func _ipSecReplacePolicyInFwd(src, dst, tmplSrc, tmplDst *net.IPNet, dir netlink
 	policy.Dst = &net.IPNet{IP: dst.IP.Mask(dst.Mask), Mask: dst.Mask}
 	if dir == netlink.XFRM_DIR_IN {
 		policy.Mark = &netlink.XfrmMark{
-			Value: linux_defaults.RouteMarkDecrypt,
-			Mask:  linux_defaults.IPsecMarkMaskIn,
+			Mask: linux_defaults.IPsecMarkMaskIn,
+		}
+		if tunnel {
+			// Required as this policy with the following mark does not have a
+			// corresponding XFRM state matching it. The XFRM state for Dir=In
+			// has mark for decryption only. If we don't mark this optional,
+			// then we'll get a packet drop with the reason as
+			// XfrmInTmplMismatch.
+			optional = 1
+			policy.Mark.Value = linux_defaults.RouteMarkToProxy
+		} else {
+			policy.Mark.Value = linux_defaults.RouteMarkDecrypt
 		}
 	}
 	// We always make forward rules optional. The only reason we have these
@@ -178,17 +187,26 @@ func _ipSecReplacePolicyInFwd(src, dst, tmplSrc, tmplDst *net.IPNet, dir netlink
 	// policy because Cilium BPF programs do that.
 	if dir == netlink.XFRM_DIR_FWD {
 		optional = 1
+		policy.Priority = linux_defaults.IPsecFwdPriority
 	}
 	ipSecAttachPolicyTempl(policy, key, tmplSrc.IP, tmplDst.IP, false, optional)
 	return netlink.XfrmPolicyUpdate(policy)
 }
 
-func ipSecReplacePolicyIn(src, dst, tmplSrc, tmplDst *net.IPNet) error {
-	return _ipSecReplacePolicyInFwd(src, dst, tmplSrc, tmplDst, netlink.XFRM_DIR_IN)
+func ipSecReplacePolicyIn(src, dst, tmplSrc, tmplDst *net.IPNet, tunnel bool) error {
+	// In the case that Cilium is running in tunneling mode, we insert an
+	// additional In rule. It's for allowing traffic to the proxy in the
+	// case of L7 ingress.
+	if tunnel {
+		if err := _ipSecReplacePolicyInFwd(src, dst, tmplSrc, tmplDst, tunnel, netlink.XFRM_DIR_IN); err != nil {
+			return err
+		}
+	}
+	return _ipSecReplacePolicyInFwd(src, dst, tmplSrc, tmplDst, false, netlink.XFRM_DIR_IN)
 }
 
-func ipSecReplacePolicyFwd(src, dst, tmplSrc, tmplDst *net.IPNet) error {
-	return _ipSecReplacePolicyInFwd(src, dst, tmplSrc, tmplDst, netlink.XFRM_DIR_FWD)
+func IpSecReplacePolicyFwd(src, dst, tmplSrc, tmplDst *net.IPNet) error {
+	return _ipSecReplacePolicyInFwd(src, dst, tmplSrc, tmplDst, false, netlink.XFRM_DIR_FWD)
 }
 
 func ipSecReplacePolicyOut(src, dst, tmplSrc, tmplDst *net.IPNet, dir IPSecDir) error {
@@ -316,7 +334,7 @@ func ipsecDeleteXfrmPolicy(ip net.IP) {
  * state space. Basic idea would be to reference a state using any key generated
  * from BPF program allowing for a single state per security ctx.
  */
-func UpsertIPsecEndpoint(local, remote, fwd *net.IPNet, dir IPSecDir, outputMark bool) (uint8, error) {
+func UpsertIPsecEndpoint(local, remote, fwd *net.IPNet, dir IPSecDir, outputMark, tunnel bool) (uint8, error) {
 	var spi uint8
 	var err error
 
@@ -338,12 +356,12 @@ func UpsertIPsecEndpoint(local, remote, fwd *net.IPNet, dir IPSecDir, outputMark
 					return 0, fmt.Errorf("unable to replace local state: %s", err)
 				}
 			}
-			if err = ipSecReplacePolicyIn(remote, local, remote, local); err != nil {
+			if err = ipSecReplacePolicyIn(remote, local, remote, local, tunnel); err != nil {
 				if !os.IsExist(err) {
 					return 0, fmt.Errorf("unable to replace policy in: %s", err)
 				}
 			}
-			if err = ipSecReplacePolicyFwd(remote, fwd, remote, local); err != nil {
+			if err = IpSecReplacePolicyFwd(remote, fwd, remote, local); err != nil {
 				if !os.IsExist(err) {
 					return 0, fmt.Errorf("unable to replace policy fwd: %s", err)
 				}
@@ -386,13 +404,19 @@ func DeleteIPsecEndpoint(remote *net.IPNet) {
 
 func isXfrmPolicyCilium(policy netlink.XfrmPolicy) bool {
 	if policy.Mark == nil {
+		// Check if its our fwd rule, we don't have a mark
+		// on this rule so use priority.
+		if policy.Dir == netlink.XFRM_DIR_FWD &&
+			policy.Priority == linux_defaults.IPsecFwdPriority {
+			return true
+		}
 		return false
 	}
-	if policy.Mark.Mask != linux_defaults.RouteMarkMask {
-		return false
+
+	if (policy.Mark.Value & linux_defaults.RouteMarkDecrypt) != 0 {
+		return true
 	}
-	if policy.Mark.Value == linux_defaults.RouteMarkDecrypt ||
-		policy.Mark.Value == linux_defaults.RouteMarkEncrypt {
+	if (policy.Mark.Value & linux_defaults.RouteMarkEncrypt) != 0 {
 		return true
 	}
 	return false
@@ -402,11 +426,10 @@ func isXfrmStateCilium(state netlink.XfrmState) bool {
 	if state.Mark == nil {
 		return false
 	}
-	if state.Mark.Mask != linux_defaults.RouteMarkMask {
-		return false
+	if (state.Mark.Value & linux_defaults.RouteMarkDecrypt) != 0 {
+		return true
 	}
-	if state.Mark.Value == linux_defaults.RouteMarkDecrypt ||
-		state.Mark.Value == linux_defaults.RouteMarkEncrypt {
+	if (state.Mark.Value & linux_defaults.RouteMarkEncrypt) != 0 {
 		return true
 	}
 	return false
@@ -463,9 +486,7 @@ func LoadIPSecKeysFile(path string) (int, uint8, error) {
 func loadIPSecKeys(r io.Reader) (int, uint8, error) {
 	var spi uint8
 	var keyLen int
-	scopedLog := log.WithFields(logrus.Fields{
-		"spi": spi,
-	})
+	scopedLog := log
 
 	if err := encrypt.MapCreate(); err != nil {
 		return 0, 0, fmt.Errorf("Encrypt map create failed: %v", err)
@@ -557,6 +578,11 @@ func loadIPSecKeys(r io.Reader) (int, uint8, error) {
 			}
 			ipSecKeysGlobal[""] = ipSecKey
 		}
+
+		scopedLog := log.WithFields(logrus.Fields{
+			"oldSPI": oldSpi,
+			"SPI":    spi,
+		})
 
 		// Detect a version change and call cleanup routine to remove old
 		// keys after a timeout period. We also want to ensure on restart

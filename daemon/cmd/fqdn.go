@@ -18,8 +18,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -230,9 +230,15 @@ func (d *Daemon) bootstrapFQDN(possibleEndpoints map[uint16]*endpoint.Endpoint, 
 			cfg.Cache.ReplaceFromCacheByNames(namesToClean, caches...)
 
 			metrics.FQDNGarbageCollectorCleanedTotal.Add(float64(len(namesToClean)))
-			log.WithField(logfields.Controller, dnsGCJobName).Infof(
-				"FQDN garbage collector work deleted %d name entries", len(namesToClean))
 			_, err := d.dnsNameManager.ForceGenerateDNS(context.TODO(), namesToClean)
+			namesCount := len(namesToClean)
+			// Limit the amount of info level logging to some sane amount
+			if namesCount > 20 {
+				// namedsToClean is only used for logging after this so we can reslice it in place
+				namesToClean = namesToClean[:20]
+			}
+			log.WithField(logfields.Controller, dnsGCJobName).Infof(
+				"FQDN garbage collector work deleted %d name entries: %s", namesCount, strings.Join(namesToClean, ","))
 			return err
 		},
 		Context: d.ctx,
@@ -797,7 +803,7 @@ func deleteDNSLookups(globalCache *fqdn.DNSCache, endpoints []*endpoint.Endpoint
 // readPreCache returns a fqdn.DNSCache object created from the json data at
 // preCachePath
 func readPreCache(preCachePath string) (cache *fqdn.DNSCache, err error) {
-	data, err := ioutil.ReadFile(preCachePath)
+	data, err := os.ReadFile(preCachePath)
 	if err != nil {
 		return nil, err
 	}

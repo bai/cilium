@@ -27,7 +27,8 @@ import (
 	"github.com/cilium/cilium/pkg/crypto/certloader"
 	v1 "github.com/cilium/cilium/pkg/hubble/api/v1"
 	"github.com/cilium/cilium/pkg/hubble/container"
-	"github.com/cilium/cilium/pkg/hubble/math"
+	"github.com/cilium/cilium/pkg/hubble/exporter"
+	"github.com/cilium/cilium/pkg/hubble/exporter/exporteroption"
 	"github.com/cilium/cilium/pkg/hubble/metrics"
 	"github.com/cilium/cilium/pkg/hubble/monitor"
 	"github.com/cilium/cilium/pkg/hubble/observer"
@@ -35,6 +36,9 @@ import (
 	"github.com/cilium/cilium/pkg/hubble/parser"
 	"github.com/cilium/cilium/pkg/hubble/peer"
 	"github.com/cilium/cilium/pkg/hubble/peer/serviceoption"
+	"github.com/cilium/cilium/pkg/hubble/recorder"
+	"github.com/cilium/cilium/pkg/hubble/recorder/recorderoption"
+	"github.com/cilium/cilium/pkg/hubble/recorder/sink"
 	"github.com/cilium/cilium/pkg/hubble/server"
 	"github.com/cilium/cilium/pkg/hubble/server/serveroption"
 	"github.com/cilium/cilium/pkg/identity"
@@ -132,6 +136,24 @@ func (d *Daemon) launchHubble() {
 		observeroption.WithMonitorBuffer(option.Config.HubbleEventQueueSize),
 		observeroption.WithCiliumDaemon(d),
 	)
+	if option.Config.HubbleExportFilePath != "" {
+		exporterOpts := []exporteroption.Option{
+			exporteroption.WithPath(option.Config.HubbleExportFilePath),
+			exporteroption.WithMaxSizeMB(option.Config.HubbleExportFileMaxSizeMB),
+			exporteroption.WithMaxBackups(option.Config.HubbleExportFileMaxBackups),
+		}
+		if option.Config.HubbleExportFileCompress {
+			exporterOpts = append(exporterOpts, exporteroption.WithCompress())
+		}
+		hubbleExporter, err := exporter.NewExporter(logger, exporterOpts...)
+		if err != nil {
+			logger.WithError(err).Error("Failed to configure Hubble export")
+		} else {
+			opt := observeroption.WithOnDecodedEvent(hubbleExporter)
+			observerOpts = append(observerOpts, opt)
+		}
+	}
+
 	d.hubbleObserver, err = observer.NewLocalServer(payloadParser, logger,
 		observerOpts...,
 	)
@@ -148,13 +170,32 @@ func (d *Daemon) launchHubble() {
 	if option.Config.HubbleTLSDisabled {
 		peerServiceOptions = append(peerServiceOptions, serviceoption.WithoutTLSInfo())
 	}
-	localSrv, err := server.NewServer(logger,
+
+	localSrvOpts := []serveroption.Option{
 		serveroption.WithUnixSocketListener(sockPath),
 		serveroption.WithHealthService(),
 		serveroption.WithObserverService(d.hubbleObserver),
 		serveroption.WithPeerService(peer.NewService(d.nodeDiscovery.Manager, peerServiceOptions...)),
 		serveroption.WithInsecure(),
-	)
+	}
+
+	if option.Config.EnableRecorder && option.Config.EnableHubbleRecorderAPI {
+		dispatch, err := sink.NewDispatch(option.Config.HubbleRecorderSinkQueueSize)
+		if err != nil {
+			logger.WithError(err).Error("Failed to initialize Hubble recorder sink dispatch")
+			return
+		}
+		d.monitorAgent.RegisterNewConsumer(dispatch)
+		svc, err := recorder.NewService(d.rec, dispatch,
+			recorderoption.WithStoragePath(option.Config.HubbleRecorderStoragePath))
+		if err != nil {
+			logger.WithError(err).Error("Failed to initialize Hubble recorder service")
+			return
+		}
+		localSrvOpts = append(localSrvOpts, serveroption.WithRecorderService(svc))
+	}
+
+	localSrv, err := server.NewServer(logger, localSrvOpts...)
 	if err != nil {
 		logger.WithError(err).Error("Failed to initialize local Hubble server")
 		return
@@ -367,22 +408,7 @@ func (d *Daemon) GetK8sStore(name string) k8scache.Store {
 }
 
 // getHubbleEventBufferCapacity returns the user configured capacity for
-// Hubble's events buffer. The deprecated flag hubble-flow-buffer-size is
-// evaluated if greater than 0, otherwise the new flag
-// hubble-event-buffer-capacity is used instead.
+// Hubble's events buffer.
 func getHubbleEventBufferCapacity(logger logrus.FieldLogger) (container.Capacity, error) {
-	// check deprecated old flag for compatibility
-	// TODO: remove support for HubbleFlowBufferSize once 1.11 is out
-	if option.Config.HubbleFlowBufferSize > 0 {
-		logger.Warningf("Option '%s' is deprecated and will be removed in Cilium 1.11", option.HubbleFlowBufferSize)
-		c, err := container.NewCapacity(option.Config.HubbleFlowBufferSize)
-		if err == nil {
-			return c, nil
-		}
-		// old flag behavior was to silently round up the buffer capacity to a
-		// valid value (eg: 1500 -> 2047, 5000 -> 8191, etc) so adjust provided
-		// value to the nearest valid one for compatibility purpose
-		return container.NewCapacity((1<<math.MSB(uint64(option.Config.HubbleFlowBufferSize)) - 1))
-	}
 	return container.NewCapacity(option.Config.HubbleEventBufferCapacity)
 }

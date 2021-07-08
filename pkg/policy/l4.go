@@ -1,4 +1,4 @@
-// Copyright 2016-2020 Authors of Cilium
+// Copyright 2016-2021 Authors of Cilium
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -763,6 +763,41 @@ func (l4 *L4Filter) matchesLabels(labels labels.LabelArray) (bool, bool) {
 		}
 	}
 	return selected, false
+}
+
+// addL4Filter adds 'filterToMerge' into the 'resMap'. Returns an error if it
+// the 'filterToMerge' can't be merged with an existing filter for the same
+// port and proto.
+func addL4Filter(policyCtx PolicyContext,
+	ctx *SearchContext, resMap L4PolicyMap,
+	p api.PortProtocol, proto api.L4Proto,
+	filterToMerge *L4Filter,
+	ruleLabels labels.LabelArray) error {
+
+	key := p.Port + "/" + string(proto)
+	existingFilter, ok := resMap[key]
+	if !ok {
+		resMap[key] = filterToMerge
+		return nil
+	}
+
+	selectorCache := policyCtx.GetSelectorCache()
+	if err := mergePortProto(ctx, existingFilter, filterToMerge, selectorCache); err != nil {
+		filterToMerge.detach(selectorCache)
+		return err
+	}
+	var exists bool
+	for _, existingRuleLabels := range existingFilter.DerivedFromRules {
+		if existingRuleLabels.DeepEqual(&ruleLabels) {
+			exists = true
+			break
+		}
+	}
+	if !exists {
+		existingFilter.DerivedFromRules = append(existingFilter.DerivedFromRules, ruleLabels)
+	}
+	resMap[key] = existingFilter
+	return nil
 }
 
 // L4PolicyMap is a list of L4 filters indexable by protocol/port

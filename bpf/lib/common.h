@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-2.0 */
-/* Copyright (C) 2016-2020 Authors of Cilium */
+/* Copyright (C) 2016-2021 Authors of Cilium */
 
 #ifndef __LIB_COMMON_H_
 #define __LIB_COMMON_H_
@@ -12,6 +12,7 @@
 #include <linux/in.h>
 #include <linux/socket.h>
 
+#include "eth.h"
 #include "endian.h"
 #include "mono.h"
 #include "config.h"
@@ -80,7 +81,9 @@
 #define CILIUM_CALL_NAT46			9
 #define CILIUM_CALL_IPV6_FROM_LXC		10
 #define CILIUM_CALL_IPV4_TO_LXC_POLICY_ONLY	11
+#define CILIUM_CALL_IPV4_TO_HOST_POLICY_ONLY	CILIUM_CALL_IPV4_TO_LXC_POLICY_ONLY
 #define CILIUM_CALL_IPV6_TO_LXC_POLICY_ONLY	12
+#define CILIUM_CALL_IPV6_TO_HOST_POLICY_ONLY	CILIUM_CALL_IPV6_TO_LXC_POLICY_ONLY
 #define CILIUM_CALL_IPV4_TO_ENDPOINT		13
 #define CILIUM_CALL_IPV6_TO_ENDPOINT		14
 #define CILIUM_CALL_IPV4_NODEPORT_NAT		15
@@ -118,6 +121,14 @@ static __always_inline bool validate_ethertype(struct __ctx_buff *ctx,
 	void *data_end = ctx_data_end(ctx);
 	struct ethhdr *eth = data;
 
+	if (ETH_HLEN == 0) {
+		/* The packet is received on L2-less device. Determine L3
+		 * protocol from skb->protocol.
+		 */
+		*proto = ctx_get_protocol(ctx);
+		return true;
+	}
+
 	if (data + ETH_HLEN > data_end)
 		return false;
 	*proto = eth->h_proto;
@@ -127,10 +138,11 @@ static __always_inline bool validate_ethertype(struct __ctx_buff *ctx,
 }
 
 static __always_inline __maybe_unused bool
-__revalidate_data_pull(struct __ctx_buff *ctx, void **data_, void **data_end_,
-		       void **l3, const __u32 l3_len, const bool pull)
+____revalidate_data_pull(struct __ctx_buff *ctx, void **data_, void **data_end_,
+			 void **l3, const __u32 l3_len, const bool pull,
+			 __u8 eth_hlen)
 {
-	const __u32 tot_len = ETH_HLEN + l3_len;
+	const __u64 tot_len = eth_hlen + l3_len;
 	void *data_end;
 	void *data;
 
@@ -146,8 +158,16 @@ __revalidate_data_pull(struct __ctx_buff *ctx, void **data_, void **data_end_,
 	*data_ = data;
 	*data_end_ = data_end;
 
-	*l3 = data + ETH_HLEN;
+	*l3 = data + eth_hlen;
 	return true;
+}
+
+static __always_inline __maybe_unused bool
+__revalidate_data_pull(struct __ctx_buff *ctx, void **data, void **data_end,
+		       void **l3, const __u32 l3_len, const bool pull)
+{
+	return ____revalidate_data_pull(ctx, data, data_end, l3, l3_len, pull,
+					ETH_HLEN);
 }
 
 /* revalidate_data_pull() initializes the provided pointers from the ctx and
@@ -173,6 +193,10 @@ __revalidate_data_pull(struct __ctx_buff *ctx, void **data_, void **data_end_,
  */
 #define revalidate_data(ctx, data, data_end, ip)			\
 	__revalidate_data_pull(ctx, data, data_end, (void **)ip, sizeof(**ip), false)
+
+#define revalidate_data_with_eth_hlen(ctx, data, data_end, ip, eth_len)		\
+	____revalidate_data_pull(ctx, data, data_end, (void **)ip,	\
+				 sizeof(**ip), false, eth_len)
 
 /* Macros for working with L3 cilium defined IPV6 addresses */
 #define BPF_V6(dst, ...)	BPF_V6_1(dst, fetch_ipv6(__VA_ARGS__))
@@ -280,7 +304,6 @@ enum {
 	POLICY_EGRESS = 2,
 };
 
-
 enum {
 	POLICY_MATCH_NONE = 0,
 	POLICY_MATCH_L3_ONLY = 1,
@@ -290,12 +313,18 @@ enum {
 };
 
 enum {
+	CAPTURE_INGRESS = 1,
+	CAPTURE_EGRESS = 2,
+};
+
+enum {
 	CILIUM_NOTIFY_UNSPEC,
 	CILIUM_NOTIFY_DROP,
 	CILIUM_NOTIFY_DBG_MSG,
 	CILIUM_NOTIFY_DBG_CAPTURE,
 	CILIUM_NOTIFY_TRACE,
 	CILIUM_NOTIFY_POLICY_VERDICT,
+	CILIUM_NOTIFY_CAPTURE,
 };
 
 #define NOTIFY_COMMON_HDR \
@@ -420,6 +449,7 @@ enum {
 #define REASON_LB_REVNAT_STALE		8
 #define REASON_FRAG_PACKET		9
 #define REASON_FRAG_PACKET_UPDATE	10
+#define REASON_MISSED_CUSTOM_CALL	11
 
 /* Lookup scope for externalTrafficPolicy=Local */
 #define LB_LOOKUP_SCOPE_EXT	0
@@ -533,6 +563,14 @@ static __always_inline __u32 or_encrypt_key(__u8 key)
 #define TC_INDEX_F_SKIP_RECIRCULATION	8
 #define TC_INDEX_F_SKIP_HOST_FIREWALL	16
 
+/*
+ * For use in ctx_{load,store}_meta(), which operates on sk_buff->cb.
+ * The verifier only exposes the first 5 slots in cb[], so this enum
+ * only contains 5 entries. Aliases are added to the slots to re-use
+ * them under different names in different parts of the datapath.
+ * Take care to not clobber slots used by other functions in the same
+ * code path.
+ */
 /* ctx_{load,store}_meta() usage: */
 enum {
 	CB_SRC_LABEL,
@@ -540,6 +578,7 @@ enum {
 #define	CB_HINT			CB_SRC_LABEL	/* Alias, non-overlapping */
 #define	CB_PROXY_MAGIC		CB_SRC_LABEL	/* Alias, non-overlapping */
 #define	CB_ENCRYPT_MAGIC	CB_SRC_LABEL	/* Alias, non-overlapping */
+#define	CB_DST_ENDPOINT_ID	CB_SRC_LABEL    /* Alias, non-overlapping */
 	CB_IFINDEX,
 #define	CB_ADDR_V4		CB_IFINDEX	/* Alias, non-overlapping */
 #define	CB_ADDR_V6_1		CB_IFINDEX	/* Alias, non-overlapping */
@@ -556,6 +595,7 @@ enum {
 #define	CB_ENCRYPT_DST		CB_CT_STATE	/* Alias, non-overlapping,
 						 * Not used by xfrm.
 						 */
+#define	CB_CUSTOM_CALLS		CB_CT_STATE	/* Alias, non-overlapping */
 };
 
 /* State values for NAT46 */
@@ -637,7 +677,14 @@ struct ipv4_ct_tuple {
 
 struct ct_entry {
 	__u64 rx_packets;
-	__u64 rx_bytes;
+	/* Previously, the rx_bytes field was not used for entries with
+	 * the dir=CT_SERVICE (see GH#7060). Therefore, we can safely abuse
+	 * this field to save the backend_id.
+	 */
+	union {
+		__u64 rx_bytes;
+		__u64 backend_id;
+	};
 	__u64 tx_packets;
 	__u64 tx_bytes;
 	__u32 lifetime;
@@ -847,7 +894,8 @@ struct lb6_src_range_key {
 	union v6addr addr;
 };
 
-static __always_inline int redirect_ep(int ifindex __maybe_unused,
+static __always_inline int redirect_ep(struct __ctx_buff *ctx __maybe_unused,
+				       int ifindex __maybe_unused,
 				       bool needs_backlog __maybe_unused)
 {
 	/* If our datapath has proper redirect support, we make use
@@ -860,8 +908,17 @@ static __always_inline int redirect_ep(int ifindex __maybe_unused,
 	 * versa.
 	 */
 #ifdef ENABLE_HOST_REDIRECT
-	return needs_backlog || !is_defined(ENABLE_REDIRECT_FAST) ?
-	       redirect(ifindex, 0) : redirect_peer(ifindex, 0);
+	if (needs_backlog || !is_defined(ENABLE_REDIRECT_FAST)) {
+		return redirect(ifindex, 0);
+	} else {
+# ifdef ENCAP_IFINDEX
+		/* When coming from overlay, we need to set packet type
+		 * to HOST as otherwise we might get dropped in IP layer.
+		 */
+		ctx_change_type(ctx, PACKET_HOST);
+# endif /* ENCAP_IFINDEX */
+		return redirect_peer(ifindex, 0);
+	}
 #else
 	return CTX_ACT_OK;
 #endif /* ENABLE_HOST_REDIRECT */

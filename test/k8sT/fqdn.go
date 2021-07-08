@@ -15,7 +15,6 @@
 package k8sTest
 
 import (
-	"context"
 	"fmt"
 	"net"
 
@@ -25,11 +24,11 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("K8sFQDNTest", func() {
+// The 5.4 CI job is intended to catch BPF complexity regressions and as such
+// doesn't need to execute this test suite.
+var _ = SkipDescribeIf(helpers.RunsOn54Kernel, "K8sFQDNTest", func() {
 	var (
-		kubectl          *helpers.Kubectl
-		backgroundCancel context.CancelFunc = func() {}
-		backgroundError  error
+		kubectl *helpers.Kubectl
 
 		demoManifest   = ""
 		ciliumFilename string
@@ -84,6 +83,10 @@ var _ = Describe("K8sFQDNTest", func() {
 		Expect(err).Should(BeNil(), "Testapp is not ready after timeout")
 
 		appPods = helpers.GetAppPods(apps, helpers.DefaultNamespace, kubectl, "id")
+
+		// Validate that coredns is reachable from test pods
+		err = kubectl.NslookupInPod(helpers.DefaultNamespace, appPods[helpers.App2], "kube-dns.kube-system.svc.cluster.local")
+		Expect(err).Should(BeNil(), "Error reaching kube-dns before test: %s", err)
 	})
 
 	AfterFailed(func() {
@@ -96,16 +99,6 @@ var _ = Describe("K8sFQDNTest", func() {
 
 		UninstallCiliumFromManifest(kubectl, ciliumFilename)
 		kubectl.CloseSSHClient()
-	})
-
-	JustBeforeEach(func() {
-		backgroundCancel, backgroundError = kubectl.BackgroundReport("uptime")
-		Expect(backgroundError).To(BeNil(), "Cannot start background report process")
-	})
-
-	JustAfterEach(func() {
-		kubectl.ValidateNoErrorsInLogs(CurrentGinkgoTestDescription().Duration)
-		backgroundCancel()
 	})
 
 	AfterEach(func() {

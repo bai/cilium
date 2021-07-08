@@ -29,9 +29,10 @@ import (
 	"github.com/cilium/cilium/pkg/logging/logfields"
 	"github.com/cilium/cilium/pkg/rand"
 	"github.com/cilium/cilium/pkg/spanstat"
+	"github.com/cilium/cilium/pkg/version"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-07-01/compute"
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-09-01/network"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-03-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-11-01/network"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -39,11 +40,10 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 )
 
-const (
-	userAgent = "cilium"
+var (
+	log       = logging.DefaultLogger.WithField(logfields.LogSubsys, "azure-api")
+	userAgent = fmt.Sprintf("cilium/%s", version.Version)
 )
-
-var log = logging.DefaultLogger.WithField(logfields.LogSubsys, "azure-api")
 
 // Client represents an Azure API client
 type Client struct {
@@ -63,27 +63,19 @@ type MetricsAPI interface {
 	ObserveRateLimit(operation string, duration time.Duration)
 }
 
-func constructAuthorizer(cloudName, userAssignedIdentityID string) (autorest.Authorizer, error) {
+func constructAuthorizer(env azure.Environment, userAssignedIdentityID string) (autorest.Authorizer, error) {
 	if userAssignedIdentityID != "" {
-		env, err := azure.EnvironmentFromName(cloudName)
-		if err != nil {
-			return nil, err
-		}
-		msiEndpoint, err := adal.GetMSIVMEndpoint()
+		spToken, err := adal.NewServicePrincipalTokenFromManagedIdentity(env.ServiceManagementEndpoint, &adal.ManagedIdentityOptions{
+			ClientID: userAssignedIdentityID,
+		})
 		if err != nil {
 			return nil, err
 		}
 
-		spToken, err := adal.NewServicePrincipalTokenFromMSIWithUserAssignedID(msiEndpoint,
-			env.ServiceManagementEndpoint,
-			userAssignedIdentityID)
-		if err != nil {
-			return nil, err
-		}
 		return autorest.NewBearerAuthorizer(spToken), nil
 	} else {
 		// Authorizer based on file first and then environment variables
-		authorizer, err := auth.NewAuthorizerFromFile(compute.DefaultBaseURI)
+		authorizer, err := auth.NewAuthorizerFromFile(env.ResourceManagerEndpoint)
 		if err == nil {
 			return authorizer, nil
 		}
@@ -93,18 +85,23 @@ func constructAuthorizer(cloudName, userAssignedIdentityID string) (autorest.Aut
 
 // NewClient returns a new Azure client
 func NewClient(cloudName, subscriptionID, resourceGroup, userAssignedIdentityID string, metrics MetricsAPI, rateLimit float64, burst int, usePrimary bool) (*Client, error) {
+	azureEnv, err := azure.EnvironmentFromName(cloudName)
+	if err != nil {
+		return nil, err
+	}
+
 	c := &Client{
 		resourceGroup:   resourceGroup,
-		interfaces:      network.NewInterfacesClient(subscriptionID),
-		virtualnetworks: network.NewVirtualNetworksClient(subscriptionID),
-		vmss:            compute.NewVirtualMachineScaleSetVMsClient(subscriptionID),
-		vmscalesets:     compute.NewVirtualMachineScaleSetsClient(subscriptionID),
+		interfaces:      network.NewInterfacesClientWithBaseURI(azureEnv.ResourceManagerEndpoint, subscriptionID),
+		virtualnetworks: network.NewVirtualNetworksClientWithBaseURI(azureEnv.ResourceManagerEndpoint, subscriptionID),
+		vmss:            compute.NewVirtualMachineScaleSetVMsClientWithBaseURI(azureEnv.ResourceManagerEndpoint, subscriptionID),
+		vmscalesets:     compute.NewVirtualMachineScaleSetsClientWithBaseURI(azureEnv.ResourceManagerEndpoint, subscriptionID),
 		metricsAPI:      metrics,
 		limiter:         helpers.NewApiLimiter(metrics, rateLimit, burst),
 		usePrimary:      usePrimary,
 	}
 
-	authorizer, err := constructAuthorizer(cloudName, userAssignedIdentityID)
+	authorizer, err := constructAuthorizer(azureEnv, userAssignedIdentityID)
 	if err != nil {
 		return nil, err
 	}
@@ -261,8 +258,12 @@ func parseInterface(iface *network.Interface, subnets ipamTypes.SubnetMap, usePr
 				if ip.Subnet != nil {
 					addr.Subnet = *ip.Subnet.ID
 					if subnet, ok := subnets[addr.Subnet]; ok {
+						if subnet.CIDR != nil {
+							i.CIDR = subnet.CIDR.String()
+						}
 						if gateway := deriveGatewayIP(subnet.CIDR.IP); gateway != "" {
 							i.GatewayIP = gateway
+							i.Gateway = gateway
 						}
 					}
 				}
@@ -406,14 +407,23 @@ func (c *Client) AssignPrivateIpAddressesVMSS(ctx context.Context, instanceID, v
 		return fmt.Errorf("interface %s does not exist in VM %s", interfaceName, instanceID)
 	}
 
+	// All IPConfigurations on the NIC should reference the same set of Application Security Groups (ASGs).
+	// So we should first fetch the set of ASGs referenced by other IPConfigurations so that it can be
+	// added to the new IPConfigurations.
+	var appSecurityGroups *[]compute.SubResource
+	if ipConfigs := *netIfConfig.IPConfigurations; len(ipConfigs) > 0 {
+		appSecurityGroups = ipConfigs[0].ApplicationSecurityGroups
+	}
+
 	ipConfigurations := make([]compute.VirtualMachineScaleSetIPConfiguration, 0, addresses)
 	for i := 0; i < addresses; i++ {
 		ipConfigurations = append(ipConfigurations,
 			compute.VirtualMachineScaleSetIPConfiguration{
 				Name: to.StringPtr(generateIpConfigName()),
 				VirtualMachineScaleSetIPConfigurationProperties: &compute.VirtualMachineScaleSetIPConfigurationProperties{
-					PrivateIPAddressVersion: compute.IPv4,
-					Subnet:                  &compute.APIEntityReference{ID: to.StringPtr(subnetID)},
+					ApplicationSecurityGroups: appSecurityGroups,
+					PrivateIPAddressVersion:   compute.IPv4,
+					Subnet:                    &compute.APIEntityReference{ID: to.StringPtr(subnetID)},
 				},
 			},
 		)
@@ -441,12 +451,21 @@ func (c *Client) AssignPrivateIpAddressesVM(ctx context.Context, subnetID, inter
 		return fmt.Errorf("failed to get standalone instance's interface %s: %s", interfaceName, err)
 	}
 
+	// All IPConfigurations on the NIC should reference the same set of Application Security Groups (ASGs).
+	// So we should first fetch the set of ASGs referenced by other IPConfigurations so that it can be
+	// added to the new IPConfigurations.
+	var appSecurityGroups *[]network.ApplicationSecurityGroup
+	if ipConfigs := *iface.IPConfigurations; len(ipConfigs) > 0 {
+		appSecurityGroups = ipConfigs[0].ApplicationSecurityGroups
+	}
+
 	ipConfigurations := make([]network.InterfaceIPConfiguration, 0, addresses)
 	for i := 0; i < addresses; i++ {
 		ipConfigurations = append(ipConfigurations, network.InterfaceIPConfiguration{
 			Name: to.StringPtr(generateIpConfigName()),
 			InterfaceIPConfigurationPropertiesFormat: &network.InterfaceIPConfigurationPropertiesFormat{
-				PrivateIPAllocationMethod: network.Dynamic,
+				ApplicationSecurityGroups: appSecurityGroups,
+				PrivateIPAllocationMethod: network.IPAllocationMethodDynamic,
 				Subnet: &network.Subnet{
 					ID: to.StringPtr(subnetID),
 				},

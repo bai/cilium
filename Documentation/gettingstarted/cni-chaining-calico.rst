@@ -11,11 +11,7 @@ Calico
 This guide instructs how to install Cilium in chaining configuration on top of
 `Calico <https://github.com/projectcalico/calico>`_.
 
-.. note::
-
-   When running Cilium in chaining configuration on top of Calico, the L7
-   policies may not work because of conflicting packet mark usage. This
-   limitation is currently tracked at `#12454 <https://github.com/cilium/cilium/issues/12454>`_.
+.. include:: cni-chaining-limitations.rst
 
 Create a CNI configuration
 ==========================
@@ -24,7 +20,7 @@ Create a ``chaining.yaml`` file based on the following template to specify the
 desired CNI chaining configuration:
 
 
-.. code:: yaml
+.. code-block:: yaml
 
     apiVersion: v1
     kind: ConfigMap
@@ -65,7 +61,7 @@ desired CNI chaining configuration:
 
 Deploy the `ConfigMap`:
 
-.. code:: bash
+.. code-block:: shell-session
 
    kubectl apply -f chaining.yaml
 
@@ -98,6 +94,6 @@ Deploy Cilium release via Helm:
    them.
 
 .. include:: k8s-install-validate.rst
-.. include:: namespace-kube-system.rst
-.. include:: hubble-enable.rst
+
+.. include:: next-steps.rst
 

@@ -1,4 +1,4 @@
-// Copyright 2018-2019 Authors of Cilium
+// Copyright 2018-2021 Authors of Cilium
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ import (
 var (
 	nh = linuxNodeHandler{
 		nodeConfig: datapath.LocalNodeConfiguration{
-			MtuConfig: mtu.NewConfiguration(0, false, false, 100, net.IP("1.1.1.1")),
+			MtuConfig: mtu.NewConfiguration(0, false, false, false, 100, net.IP("1.1.1.1")),
 		},
 		nodeAddressing: fake.NewNodeAddressing(),
 		datapathConfig: DatapathConfiguration{
@@ -78,7 +78,7 @@ func (s *linuxTestSuite) TestCreateNodeRoute(c *check.C) {
 
 	fakeNodeAddressing := fake.NewNodeAddressing()
 
-	nodeHandler := NewNodeHandler(dpConfig, fakeNodeAddressing)
+	nodeHandler := NewNodeHandler(dpConfig, fakeNodeAddressing, nil)
 
 	c1 := cidr.MustParseCIDR("10.10.0.0/16")
 	generatedRoute, err := nodeHandler.(*linuxNodeHandler).createNodeRouteSpec(c1, false)
@@ -107,4 +107,15 @@ func (s *linuxTestSuite) TestCreateNodeRouteSpecMtu(c *check.C) {
 
 	c.Assert(err, check.IsNil)
 	c.Assert(generatedRoute.MTU, check.Equals, 0)
+}
+
+func (s *linuxTestSuite) TestStoreLoadNeighLinks(c *check.C) {
+	tmpDir := c.MkDir()
+	devExpected := "dev1"
+	err := storeNeighLink(tmpDir, devExpected)
+	c.Assert(err, check.IsNil)
+
+	devsActual, err := loadNeighLink(tmpDir)
+	c.Assert(err, check.IsNil)
+	c.Assert(devExpected, checker.DeepEquals, devsActual)
 }

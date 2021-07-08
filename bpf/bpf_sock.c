@@ -425,11 +425,31 @@ static __always_inline int __sock4_xlate_fwd(struct bpf_sock_addr *ctx,
 	return 0;
 }
 
+static __always_inline int
+__sock4_health_fwd(struct bpf_sock_addr *ctx __maybe_unused)
+{
+	int ret = lb_skip_l4_dnat() ? SYS_PROCEED : SYS_REJECT;
+#ifdef ENABLE_HEALTH_CHECK
+	__sock_cookie key = get_socket_cookie(ctx);
+	struct lb4_health *val = NULL;
+
+	if (!lb_skip_l4_dnat())
+		val = map_lookup_elem(&LB4_HEALTH_MAP, &key);
+	if (val) {
+		ctx_set_port(ctx, val->peer.port);
+		ret = SYS_PROCEED;
+	}
+#endif /* ENABLE_HEALTH_CHECK */
+	return ret;
+}
+
 __section("connect4")
 int sock4_connect(struct bpf_sock_addr *ctx)
 {
-	if (!sock_is_health_check(ctx))
-		__sock4_xlate_fwd(ctx, ctx, false);
+	if (sock_is_health_check(ctx))
+		return __sock4_health_fwd(ctx);
+
+	__sock4_xlate_fwd(ctx, ctx, false);
 	return SYS_PROCEED;
 }
 
@@ -982,11 +1002,40 @@ static __always_inline int __sock6_xlate_fwd(struct bpf_sock_addr *ctx,
 #endif /* ENABLE_IPV6 */
 }
 
+static __always_inline int
+__sock6_health_fwd(struct bpf_sock_addr *ctx __maybe_unused)
+{
+	int ret = lb_skip_l4_dnat() ? SYS_PROCEED : SYS_REJECT;
+#ifdef ENABLE_HEALTH_CHECK
+	union v6addr addr6;
+
+	ctx_get_v6_address(ctx, &addr6);
+	if (is_v4_in_v6(&addr6)) {
+		return __sock4_health_fwd(ctx);
+	} else {
+#ifdef ENABLE_IPV6
+		__sock_cookie key = get_socket_cookie(ctx);
+		struct lb6_health *val = NULL;
+
+		if (!lb_skip_l4_dnat())
+			val = map_lookup_elem(&LB6_HEALTH_MAP, &key);
+		if (val) {
+			ctx_set_port(ctx, val->peer.port);
+			ret = SYS_PROCEED;
+		}
+#endif /* ENABLE_IPV6 */
+	}
+#endif /* ENABLE_HEALTH_CHECK */
+	return ret;
+}
+
 __section("connect6")
 int sock6_connect(struct bpf_sock_addr *ctx)
 {
-	if (!sock_is_health_check(ctx))
-		__sock6_xlate_fwd(ctx, false);
+	if (sock_is_health_check(ctx))
+		return __sock6_health_fwd(ctx);
+
+	__sock6_xlate_fwd(ctx, false);
 	return SYS_PROCEED;
 }
 

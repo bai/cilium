@@ -35,6 +35,7 @@ import (
 	pkgLabels "github.com/cilium/cilium/pkg/labels"
 	"github.com/cilium/cilium/pkg/labelsfilter"
 	"github.com/cilium/cilium/pkg/lock"
+	"github.com/cilium/cilium/pkg/maps/ctmap"
 	"github.com/cilium/cilium/pkg/metrics"
 	monitorAPI "github.com/cilium/cilium/pkg/monitor/api"
 	"github.com/cilium/cilium/pkg/option"
@@ -78,6 +79,7 @@ var suite = EndpointSuite{repo: policy.NewPolicyRepository(nil, nil)}
 var _ = Suite(&suite)
 
 func (s *EndpointSuite) SetUpSuite(c *C) {
+	ctmap.InitMapInfo(option.CTMapEntriesGlobalTCPDefault, option.CTMapEntriesGlobalAnyDefault, true, true, true)
 	s.repo = policy.NewPolicyRepository(nil, nil)
 	// GetConfig the default labels prefix filter
 	err := labelsfilter.ParseLabelPrefixCfg(nil, "")
@@ -284,7 +286,7 @@ func (s *EndpointSuite) TestEndpointState(c *C) {
 	assertStateTransition(c, e, e.setState, StateReady, StateDisconnecting, true)
 	assertStateTransition(c, e, e.setState, StateReady, StateDisconnected, false)
 
-	assertStateTransition(c, e, e.setState, StateWaitingToRegenerate, StateWaitingForIdentity, true)
+	assertStateTransition(c, e, e.setState, StateWaitingToRegenerate, StateWaitingForIdentity, false)
 	assertStateTransition(c, e, e.setState, StateWaitingToRegenerate, StateReady, false)
 	assertStateTransition(c, e, e.setState, StateWaitingToRegenerate, StateWaitingToRegenerate, false)
 	assertStateTransition(c, e, e.setState, StateWaitingToRegenerate, StateRegenerating, false)
@@ -371,8 +373,8 @@ func (s *EndpointSuite) TestEndpointState(c *C) {
 }
 
 func assertStateTransition(c *C,
-	e *Endpoint, stateSetter func(string, string) bool,
-	from, to string,
+	e *Endpoint, stateSetter func(toState State, reason string) bool,
+	from, to State,
 	success bool) {
 
 	e.state = from
@@ -415,12 +417,12 @@ func assertStateTransition(c *C,
 	}
 }
 
-func isFinalState(state string) bool {
-	return (state == StateDisconnected || state == StateInvalid)
+func isFinalState(state State) bool {
+	return state == StateDisconnected || state == StateInvalid
 }
 
-func getMetricValue(state string) int64 {
-	return int64(metrics.GetGaugeValue(metrics.EndpointStateCount.WithLabelValues(state)))
+func getMetricValue(state State) int64 {
+	return int64(metrics.GetGaugeValue(metrics.EndpointStateCount.WithLabelValues(string(state))))
 }
 
 func (s *EndpointSuite) TestWaitForPolicyRevision(c *C) {

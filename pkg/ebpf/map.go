@@ -15,7 +15,10 @@
 package ebpf
 
 import (
+	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/cilium/cilium/api/v1/models"
 	"github.com/cilium/cilium/pkg/bpf"
@@ -28,8 +31,15 @@ type MapSpec = ciliumebpf.MapSpec
 
 const (
 	PerCPUHash = ciliumebpf.PerCPUHash
+	Array      = ciliumebpf.Array
+	HashOfMaps = ciliumebpf.HashOfMaps
 
 	PinByName = ciliumebpf.PinByName
+)
+
+var (
+	ErrKeyNotExist = ciliumebpf.ErrKeyNotExist
+	LoadPinnedMap  = ciliumebpf.LoadPinnedMap
 )
 
 // IterateCallback represents the signature of the callback function expected by
@@ -53,6 +63,37 @@ func NewMap(spec *MapSpec) *Map {
 	}
 }
 
+// OpenMap opens the given bpf map and generates the Map object based on the
+// information stored in the bpf map.
+func OpenMap(mapName string) (*Map, error) {
+	path := bpf.MapPath(mapName)
+
+	newMap, err := LoadPinnedMap(path, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	m := &Map{
+		Map:  newMap,
+		path: path,
+	}
+
+	registerMap(m)
+
+	return m, nil
+}
+
+func MapFromID(id int) (*Map, error) {
+	newMap, err := ciliumebpf.NewMapFromID(ciliumebpf.MapID(id))
+	if err != nil {
+		return nil, err
+	}
+
+	return &Map{
+		Map: newMap,
+	}, nil
+}
+
 // OpenOrCreate tries to open or create the eBPF map identified by the spec in
 // the Map object.
 func (m *Map) OpenOrCreate() error {
@@ -63,6 +104,10 @@ func (m *Map) OpenOrCreate() error {
 		return nil
 	}
 
+	if m.spec == nil {
+		return fmt.Errorf("cannot create map: nil map spec")
+	}
+
 	opts := ciliumebpf.MapOptions{
 		PinPath: bpf.MapPrefixPath(),
 	}
@@ -70,13 +115,57 @@ func (m *Map) OpenOrCreate() error {
 	mapType := bpf.GetMapType(bpf.MapType(m.spec.Type))
 	m.spec.Flags = m.spec.Flags | bpf.GetPreAllocateMapFlags(mapType)
 
+	path := bpf.MapPath(m.spec.Name)
+
+	if m.spec.Pinning == ciliumebpf.PinByName {
+		mapDir := filepath.Dir(path)
+
+		if _, err := os.Stat(mapDir); os.IsNotExist(err) {
+			if err = os.MkdirAll(mapDir, 0755); err != nil {
+				return &os.PathError{
+					Op:   "Unable create map base directory",
+					Path: path,
+					Err:  err,
+				}
+			}
+		}
+	}
+
 	newMap, err := ciliumebpf.NewMapWithOptions(m.spec, opts)
 	if err != nil {
-		return fmt.Errorf("unable to create map: %w", err)
+		if !errors.Is(err, ciliumebpf.ErrMapIncompatible) {
+			return fmt.Errorf("unable to create map: %w", err)
+		}
+
+		// There already exists a pinned map but it has a different
+		// configuration (e.g different type, k/v size or flags).
+		// Try to delete and recreate it.
+
+		log.WithField("map", m.spec.Name).
+			WithError(err).Warn("Removing map to allow for property upgrade (expect map data loss)")
+
+		oldMap, err := ciliumebpf.LoadPinnedMap(path, &opts.LoadPinOptions)
+		if err != nil {
+			return fmt.Errorf("cannot load pinned map %s: %w", m.spec.Name, err)
+		}
+		defer func() {
+			if err := oldMap.Close(); err != nil {
+				log.WithField("map", m.spec.Name).Warnf("Cannot close map: %v", err)
+			}
+		}()
+
+		if err = oldMap.Unpin(); err != nil {
+			return fmt.Errorf("cannot unpin map %s: %w", m.spec.Name, err)
+		}
+
+		newMap, err = ciliumebpf.NewMapWithOptions(m.spec, opts)
+		if err != nil {
+			return fmt.Errorf("unable to create map: %w", err)
+		}
 	}
 
 	m.Map = newMap
-	m.path = bpf.MapPath(m.spec.Name)
+	m.path = path
 
 	registerMap(m)
 	return nil

@@ -231,9 +231,8 @@ static __always_inline __u8 __ct_lookup(const void *map, struct __ctx_buff *ctx,
 			ct_state->ifindex = entry->ifindex;
 			ct_state->dsr = entry->dsr;
 			ct_state->proxy_redirect = entry->proxy_redirect;
-			/* See the ct_create4 comments re the rx_bytes hack */
 			if (dir == CT_SERVICE)
-				ct_state->backend_id = entry->rx_bytes;
+				ct_state->backend_id = entry->backend_id;
 		}
 
 #ifdef ENABLE_NAT46
@@ -406,12 +405,12 @@ static __always_inline int ct_lookup6(const void *map,
 				tuple->flags |= TUPLE_F_RELATED;
 				break;
 
-			case ICMPV6_ECHO_REQUEST:
 			case ICMPV6_ECHO_REPLY:
-				if (dir == CT_INGRESS)
-					tuple->sport = identifier;
-				else
-					tuple->dport = identifier;
+				tuple->sport = identifier;
+				break;
+
+			case ICMPV6_ECHO_REQUEST:
+				tuple->dport = identifier;
 				/* fall through */
 			default:
 				action = ACTION_CREATE;
@@ -627,11 +626,10 @@ static __always_inline int ct_lookup4(const void *map,
 				break;
 
 			case ICMP_ECHOREPLY:
+				tuple->sport = identifier;
+				break;
 			case ICMP_ECHO:
-				if (dir == CT_INGRESS)
-					tuple->sport = identifier;
-				else
-					tuple->dport = identifier;
+				tuple->dport = identifier;
 				/* fall through */
 			default:
 				action = ACTION_CREATE;
@@ -715,8 +713,7 @@ ct_update6_backend_id(const void *map, const struct ipv6_ct_tuple *tuple,
 	if (!entry)
 		return;
 
-	/* See the ct_create4 comments re the rx_bytes hack */
-	entry->rx_bytes = state->backend_id;
+	entry->backend_id = state->backend_id;
 }
 
 static __always_inline void
@@ -749,12 +746,12 @@ static __always_inline int ct_create6(const void *map_main, const void *map_rela
 	 */
 	entry.proxy_redirect = proxy_redirect;
 
-	/* See the ct_create4 comments re the rx_bytes hack */
 	if (dir == CT_SERVICE)
-		entry.rx_bytes = ct_state->backend_id;
+		entry.backend_id = ct_state->backend_id;
 
 	entry.lb_loopback = ct_state->loopback;
 	entry.node_port = ct_state->node_port;
+	relax_verifier();
 	entry.dsr = ct_state->dsr;
 	entry.ifindex = ct_state->ifindex;
 
@@ -810,8 +807,7 @@ static __always_inline void ct_update4_backend_id(const void *map,
 	if (!entry)
 		return;
 
-	/* See the ct_create4 comments re the rx_bytes hack */
-	entry->rx_bytes = state->backend_id;
+	entry->backend_id = state->backend_id;
 }
 
 static __always_inline void
@@ -846,15 +842,12 @@ static __always_inline int ct_create4(const void *map_main,
 
 	entry.lb_loopback = ct_state->loopback;
 	entry.node_port = ct_state->node_port;
+	relax_verifier();
 	entry.dsr = ct_state->dsr;
 	entry.ifindex = ct_state->ifindex;
 
-	/* Previously, the rx_bytes field was not used for entries with
-	 * the dir=CT_SERVICE (see GH#7060). Therefore, we can safely abuse
-	 * this field to save the backend_id.
-	 */
 	if (dir == CT_SERVICE)
-		entry.rx_bytes = ct_state->backend_id;
+		entry.backend_id = ct_state->backend_id;
 	entry.rev_nat_index = ct_state->rev_nat_index;
 	seen_flags.value |= is_tcp ? TCP_FLAG_SYN : 0;
 	ct_update_timeout(&entry, is_tcp, dir, seen_flags);

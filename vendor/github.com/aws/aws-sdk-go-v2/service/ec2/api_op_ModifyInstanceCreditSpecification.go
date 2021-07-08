@@ -15,7 +15,7 @@ import (
 // performance instance. The credit options are standard and unlimited. For more
 // information, see Burstable performance instances
 // (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/burstable-performance-instances.html)
-// in the Amazon Elastic Compute Cloud User Guide.
+// in the Amazon EC2 User Guide.
 func (c *Client) ModifyInstanceCreditSpecification(ctx context.Context, params *ModifyInstanceCreditSpecificationInput, optFns ...func(*Options)) (*ModifyInstanceCreditSpecificationOutput, error) {
 	if params == nil {
 		params = &ModifyInstanceCreditSpecificationInput{}
@@ -47,7 +47,7 @@ type ModifyInstanceCreditSpecificationInput struct {
 	// actually making the request, and provides an error response. If you have the
 	// required permissions, the error response is DryRunOperation. Otherwise, it is
 	// UnauthorizedOperation.
-	DryRun bool
+	DryRun *bool
 }
 
 type ModifyInstanceCreditSpecificationOutput struct {

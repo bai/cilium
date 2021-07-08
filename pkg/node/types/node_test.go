@@ -20,6 +20,7 @@ import (
 	"net"
 	"testing"
 
+	"github.com/cilium/cilium/pkg/annotation"
 	"github.com/cilium/cilium/pkg/checker"
 	"github.com/cilium/cilium/pkg/cidr"
 	ipamTypes "github.com/cilium/cilium/pkg/ipam/types"
@@ -78,6 +79,60 @@ func (s *NodeSuite) TestGetNodeIP(c *C) {
 
 }
 
+func (s *NodeSuite) TestGetIPByType(c *C) {
+	n := Node{
+		Name: "node-1",
+		IPAddresses: []Address{
+			{IP: net.ParseIP("192.0.2.3"), Type: addressing.NodeExternalIP},
+		},
+	}
+
+	ip := n.GetIPByType(addressing.NodeInternalIP, false)
+	c.Assert(ip, IsNil)
+	ip = n.GetIPByType(addressing.NodeInternalIP, true)
+	c.Assert(ip, IsNil)
+
+	ip = n.GetIPByType(addressing.NodeExternalIP, false)
+	c.Assert(ip.Equal(net.ParseIP("192.0.2.3")), Equals, true)
+	ip = n.GetIPByType(addressing.NodeExternalIP, true)
+	c.Assert(ip, IsNil)
+
+	n = Node{
+		Name: "node-2",
+		IPAddresses: []Address{
+			{IP: net.ParseIP("f00b::1"), Type: addressing.NodeCiliumInternalIP},
+		},
+	}
+
+	ip = n.GetIPByType(addressing.NodeExternalIP, false)
+	c.Assert(ip, IsNil)
+	ip = n.GetIPByType(addressing.NodeExternalIP, true)
+	c.Assert(ip, IsNil)
+
+	ip = n.GetIPByType(addressing.NodeCiliumInternalIP, false)
+	c.Assert(ip, IsNil)
+	ip = n.GetIPByType(addressing.NodeCiliumInternalIP, true)
+	c.Assert(ip.Equal(net.ParseIP("f00b::1")), Equals, true)
+
+	n = Node{
+		Name: "node-3",
+		IPAddresses: []Address{
+			{IP: net.ParseIP("192.42.0.3"), Type: addressing.NodeExternalIP},
+			{IP: net.ParseIP("f00d::1"), Type: addressing.NodeExternalIP},
+		},
+	}
+
+	ip = n.GetIPByType(addressing.NodeInternalIP, false)
+	c.Assert(ip, IsNil)
+	ip = n.GetIPByType(addressing.NodeInternalIP, true)
+	c.Assert(ip, IsNil)
+
+	ip = n.GetIPByType(addressing.NodeExternalIP, false)
+	c.Assert(ip.Equal(net.ParseIP("192.42.0.3")), Equals, true)
+	ip = n.GetIPByType(addressing.NodeExternalIP, true)
+	c.Assert(ip.Equal(net.ParseIP("f00d::1")), Equals, true)
+}
+
 func (s *NodeSuite) TestParseCiliumNode(c *C) {
 	nodeResource := &ciliumv2.CiliumNode{
 		ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: "default"},
@@ -134,17 +189,24 @@ func (s *NodeSuite) TestNode_ToCiliumNode(c *C) {
 			{Type: addressing.NodeInternalIP, IP: net.ParseIP("c0de::1")},
 			{Type: addressing.NodeExternalIP, IP: net.ParseIP("c0de::2")},
 		},
-		EncryptionKey: uint8(10),
-		IPv4AllocCIDR: cidr.MustParseCIDR("10.10.0.0/16"),
-		IPv6AllocCIDR: cidr.MustParseCIDR("c0de::/96"),
-		IPv4HealthIP:  net.ParseIP("1.1.1.1"),
-		IPv6HealthIP:  net.ParseIP("c0de::1"),
-		NodeIdentity:  uint32(12345),
+		EncryptionKey:   uint8(10),
+		IPv4AllocCIDR:   cidr.MustParseCIDR("10.10.0.0/16"),
+		IPv6AllocCIDR:   cidr.MustParseCIDR("c0de::/96"),
+		IPv4HealthIP:    net.ParseIP("1.1.1.1"),
+		IPv6HealthIP:    net.ParseIP("c0de::1"),
+		NodeIdentity:    uint32(12345),
+		WireguardPubKey: "6kiIGGPvMiadJ1brWTVfSGXheE3e3k5GjDTxfjMLYx8=",
 	}
 
 	n := nodeResource.ToCiliumNode()
 	c.Assert(n, checker.DeepEquals, &ciliumv2.CiliumNode{
-		ObjectMeta: metav1.ObjectMeta{Name: "foo", Namespace: ""},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "foo",
+			Namespace: "",
+			Annotations: map[string]string{
+				annotation.WireguardPubKey: "6kiIGGPvMiadJ1brWTVfSGXheE3e3k5GjDTxfjMLYx8=",
+			},
+		},
 		Spec: ciliumv2.NodeSpec{
 			Addresses: []ciliumv2.NodeAddress{
 				{Type: addressing.NodeInternalIP, IP: "2.2.2.2"},

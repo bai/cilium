@@ -22,7 +22,7 @@ import (
 
 	k8sConst "github.com/cilium/cilium/pkg/k8s/apis/cilium.io"
 	"github.com/cilium/cilium/pkg/versioncheck"
-	"github.com/cilium/cilium/test/ginkgo-ext"
+	ginkgoext "github.com/cilium/cilium/test/ginkgo-ext"
 )
 
 var (
@@ -178,10 +178,6 @@ const (
 	CiliumDockerDaemonName = "cilium-docker"
 	AgentDaemon            = "cilium-agent"
 
-	GeneratedHTMLManifest   = "html.yaml"
-	GeneratedServerManifest = "server.yaml"
-	GeneratedClientManifest = "client.yaml"
-
 	KubectlCreate = ResourceLifeCycleAction("create")
 	KubectlDelete = ResourceLifeCycleAction("delete")
 	KubectlApply  = ResourceLifeCycleAction("apply")
@@ -191,9 +187,9 @@ const (
 
 	// CiliumStableHelmChartVersion should be the chart version that points
 	// to the v1.X branch
-	CiliumStableHelmChartVersion = "1.9-dev"
-	CiliumStableVersion          = "v1.9"
-	CiliumLatestHelmChartVersion = "1.9.90"
+	CiliumStableHelmChartVersion = "1.10"
+	CiliumStableVersion          = "v" + CiliumStableHelmChartVersion
+	CiliumLatestHelmChartVersion = "1.10.90"
 
 	MonitorLogFileName = "monitor.log"
 
@@ -228,7 +224,7 @@ const (
 	// test/Vagrantfile.
 	SecondaryIface = "enp0s9"
 
-	// Logs messages that should not be in the cilium logs.
+	// Logs messages that should not be in the cilium logs...
 	panicMessage        = "panic:"
 	deadLockHeader      = "POTENTIAL DEADLOCK:"                                      // from github.com/sasha-s/go-deadlock/deadlock.go:header
 	segmentationFault   = "segmentation fault"                                       // from https://github.com/cilium/cilium/issues/3233
@@ -244,6 +240,15 @@ const (
 	uninitializedRegen  = "Uninitialized regeneration level"                         // from https://github.com/cilium/cilium/pull/10949
 	unstableStat        = "BUG: stat() has unstable behavior"                        // from https://github.com/cilium/cilium/pull/11028
 	removeTransientRule = "Unable to process chain CILIUM_TRANSIENT_FORWARD with ip" // from https://github.com/cilium/cilium/issues/11276
+	// ...and their exceptions.
+	lrpExists          = "local-redirect service exists for frontend"                         // cf. https://github.com/cilium/cilium/issues/16400
+	opCantBeFulfilled  = "Operation cannot be fulfilled on leases.coordination.k8s.io"        // cf. https://github.com/cilium/cilium/issues/16402
+	initLeaderElection = "error initially creating leader election record: leases."           // cf. https://github.com/cilium/cilium/issues/16402#issuecomment-861544964
+	lockDeletedEp      = "lock failed: endpoint is in the process of being removed"           // cf. https://github.com/cilium/cilium/issues/16422
+	globalDataSupport  = "kernel doesn't support global data"                                 // cf. https://github.com/cilium/cilium/issues/16418
+	removeInexistentID = "removing identity not added to the identity manager!"               // cf. https://github.com/cilium/cilium/issues/16419
+	failedToListCRDs   = "the server could not find the requested resource"                   // cf. https://github.com/cilium/cilium/issues/16425
+	retrieveResLock    = "retrieving resource lock kube-system/cilium-operator-resource-lock" // cf. https://github.com/cilium/cilium/issues/16402#issuecomment-871155492
 
 	// HelmTemplate is the location of the Helm templates to install Cilium
 	HelmTemplate = "../install/kubernetes/cilium"
@@ -275,16 +280,11 @@ const (
 // NightlyStableUpgradesFrom maps the cilium image versions to the helm charts
 // that will be used to run update tests in the Nightly test.
 var NightlyStableUpgradesFrom = map[string]string{
-	"v1.6": "1.6-dev",
-	"v1.7": "1.7-dev",
 	"v1.8": "1.8-dev",
 	"v1.9": "1.9-dev",
 }
 
 var (
-	IsCiliumV1_5  = versioncheck.MustCompile(">=1.4.90 <1.6.0")
-	IsCiliumV1_6  = versioncheck.MustCompile(">=1.5.90 <1.7.0")
-	IsCiliumV1_7  = versioncheck.MustCompile(">=1.6.90 <1.8.0")
 	IsCiliumV1_8  = versioncheck.MustCompile(">=1.7.90 <1.9.0")
 	IsCiliumV1_9  = versioncheck.MustCompile(">=1.8.90 <1.10.0")
 	IsCiliumV1_10 = versioncheck.MustCompile(">=1.9.90 <1.11.0")
@@ -309,6 +309,9 @@ var badLogMessages = map[string][]string{
 	unstableStat:        nil,
 	removeTransientRule: nil,
 	"DATA RACE":         nil,
+	// Exceptions for level=error should only be added as a last resort, if the
+	// error cannot be fixed in Cilium or in the test.
+	"level=error": {lrpExists, opCantBeFulfilled, initLeaderElection, lockDeletedEp, globalDataSupport, removeInexistentID, failedToListCRDs, retrieveResLock},
 }
 
 var ciliumCLICommands = map[string]string{
@@ -322,7 +325,7 @@ var ciliumCLICommands = map[string]string{
 	"cilium status --all-controllers":       "status.txt",
 	"cilium kvstore get cilium --recursive": "kvstore_get.txt",
 
-	"hubble observe --since 4h -o json": "hubble_observe.txt",
+	"hubble observe --since 4h -o jsonpb": "hubble_observe.json",
 }
 
 // ciliumKubCLICommands these commands are the same as `ciliumCLICommands` but
@@ -337,7 +340,7 @@ var ciliumKubCLICommands = map[string]string{
 	"cilium policy get":               "policy_get.txt",
 	"cilium status --all-controllers": "status.txt",
 
-	"hubble observe --since 4h -o json": "hubble_observe.txt",
+	"hubble observe --since 4h -o jsonpb": "hubble_observe.json",
 }
 
 // ciliumKubCLICommandsKVStore contains commands related to querying the kvstore.

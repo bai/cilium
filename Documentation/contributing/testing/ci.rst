@@ -42,7 +42,7 @@ After you don't need to run tests on your branch, please remove the branch from 
    with a test suite and create a regex, e.g
    ``test-only --focus="K8sDatapathConfig.*Check connectivity with automatic direct nodes routes" --k8s_version=1.18 --kernel_version=net-next``
    will run specified test in 1.18 Kubernetes cluster running on net-next nodes.
-   Kubernetes version defaults to 1.20, kernel version defaults to 4.19.
+   Kubernetes version defaults to 1.21, kernel version defaults to 4.19.
 
    +------------------------------------------------+-------------------------------------------+
    | ``test-only --focus="K8s"``                    | Runs all kubernetes tests                 |
@@ -178,11 +178,11 @@ them all at once:
 +==================+==========================+
 | master           | test-me-please           |
 +------------------+--------------------------+
+| v1.10            | test-backport-1.10       |
++------------------+--------------------------+
 | v1.9             | test-backport-1.9        |
 +------------------+--------------------------+
 | v1.8             | test-backport-1.8        |
-+------------------+--------------------------+
-| v1.7             | test-backport-1.7        |
 +------------------+--------------------------+
 
 For ``master`` PRs: on top of ``test-me-please``, one may use 
@@ -217,9 +217,9 @@ If you want to run test suite with race condition detection enabled, enter follo
 +====================================================================================+========================+
 | https://jenkins.cilium.io/view/PR/job/Cilium-PR-Ginkgo-Tests-Kernel-Race-Detection | test-race-4.19         |
 +------------------------------------------------------------------------------------+------------------------+
-| https://jenkins.cilium.io/view/PR/job/Cilium-PR-K8s-1.13-net-next-Race-Detection   | test-race-net-next     |
+| https://jenkins.cilium.io/view/PR/job/Cilium-PR-K8s-1.16-net-next-Race-Detection   | test-race-net-next     |
 +------------------------------------------------------------------------------------+------------------------+
-| https://jenkins.cilium.io/view/PR/job/Cilium-PR-K8s-1.20-kernel-4.9-Race-Detection | test-race-4.9          |
+| https://jenkins.cilium.io/view/PR/job/Cilium-PR-K8s-1.21-kernel-4.9-Race-Detection | test-race-4.9          |
 +------------------------------------------------------------------------------------+------------------------+
 | https://jenkins.cilium.io/view/PR/job/Cilium-PR-K8s-GKE-Race-Detection             | test-race-gke          |
 +------------------------------------------------------------------------------------+------------------------+
@@ -249,12 +249,12 @@ example patch that shows how this can be achieved.
                  steps {
                      parallel(
                          "Runtime":{
-    -                        sh 'cd ${TESTDIR}; ginkgo --focus="RuntimeValidated" -v -noColor'
-    +                        sh 'cd ${TESTDIR}; ginkgo --focus="XFoooo" -v -noColor'
+    -                        sh 'cd ${TESTDIR}; ginkgo --focus="RuntimeValidated"'
+    +                        sh 'cd ${TESTDIR}; ginkgo --focus="XFoooo"'
                          },
                          "K8s-1.9":{
-    -                        sh 'cd ${TESTDIR}; K8S_VERSION=1.9 ginkgo --focus="K8sValidated" -v -noColor ${FAILFAST}'
-    +                        sh 'cd ${TESTDIR}; K8S_VERSION=1.9 ginkgo --focus="K8sFooooo" -v -noColor ${FAILFAST}'
+    -                        sh 'cd ${TESTDIR}; K8S_VERSION=1.9 ginkgo --focus="K8sValidated" ${FAILFAST}'
+    +                        sh 'cd ${TESTDIR}; K8S_VERSION=1.9 ginkgo --focus="K8sFooooo" ${FAILFAST}'
                          },
                          failFast: true
                      )
@@ -325,7 +325,7 @@ Triage process
    setting the SINCE environment variable (it is a unix timestamp). The script
    checks the various test pipelines that need triage.
 
-   .. code-block:: bash
+   .. code-block:: shell-session
 
        $ contrib/scripts/jenkins-failures.sh
 
@@ -446,7 +446,7 @@ Logging into VM running tests
 1. If you have access to credentials for Jenkins, log into the Jenkins slave running the test workload
 2. Identify the vagrant box running the specific test
 
-.. code:: bash
+.. code-block:: shell-session
 
     $ vagrant global-status
     id       name                          provider   state   directory
@@ -459,7 +459,7 @@ Logging into VM running tests
 
 3. Log into the specific VM
 
-.. code:: bash
+.. code-block:: shell-session
 
     $ JOB_BASE_NAME=PR-1588 BUILD_NUMBER=6 vagrant ssh 6e68c6c
 

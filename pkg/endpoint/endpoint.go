@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -49,6 +50,7 @@ import (
 	ciliumio "github.com/cilium/cilium/pkg/k8s/apis/cilium.io"
 	slim_corev1 "github.com/cilium/cilium/pkg/k8s/slim/k8s/api/core/v1"
 	"github.com/cilium/cilium/pkg/labels"
+	"github.com/cilium/cilium/pkg/labelsfilter"
 	"github.com/cilium/cilium/pkg/lock"
 	"github.com/cilium/cilium/pkg/logging"
 	"github.com/cilium/cilium/pkg/logging/logfields"
@@ -58,6 +60,7 @@ import (
 	"github.com/cilium/cilium/pkg/maps/policymap"
 	"github.com/cilium/cilium/pkg/metrics"
 	"github.com/cilium/cilium/pkg/monitor/notifications"
+	"github.com/cilium/cilium/pkg/node"
 	"github.com/cilium/cilium/pkg/option"
 	"github.com/cilium/cilium/pkg/policy"
 	"github.com/cilium/cilium/pkg/policy/trafficdirection"
@@ -77,39 +80,42 @@ var (
 	EndpointMutableOptionLibrary = option.GetEndpointMutableOptionLibrary()
 )
 
+// State is an enumeration for possible endpoint states.
+type State string
+
 const (
 	// StateWaitingForIdentity is used to set if the endpoint is waiting
 	// for an identity from the KVStore.
-	StateWaitingForIdentity = string(models.EndpointStateWaitingForIdentity)
+	StateWaitingForIdentity = State(models.EndpointStateWaitingForIdentity)
 
 	// StateReady specifies if the endpoint is ready to be used.
-	StateReady = string(models.EndpointStateReady)
+	StateReady = State(models.EndpointStateReady)
 
 	// StateWaitingToRegenerate specifies when the endpoint needs to be regenerated, but regeneration has not started yet.
-	StateWaitingToRegenerate = string(models.EndpointStateWaitingToRegenerate)
+	StateWaitingToRegenerate = State(models.EndpointStateWaitingToRegenerate)
 
 	// StateRegenerating specifies when the endpoint is being regenerated.
-	StateRegenerating = string(models.EndpointStateRegenerating)
+	StateRegenerating = State(models.EndpointStateRegenerating)
 
 	// StateDisconnecting indicates that the endpoint is being disconnected
-	StateDisconnecting = string(models.EndpointStateDisconnecting)
+	StateDisconnecting = State(models.EndpointStateDisconnecting)
 
 	// StateDisconnected is used to set the endpoint is disconnected.
-	StateDisconnected = string(models.EndpointStateDisconnected)
+	StateDisconnected = State(models.EndpointStateDisconnected)
 
 	// StateRestoring is used to set the endpoint is being restored.
-	StateRestoring = string(models.EndpointStateRestoring)
+	StateRestoring = State(models.EndpointStateRestoring)
 
 	// StateInvalid is used when an endpoint failed during creation due to
 	// invalid data.
-	StateInvalid = string(models.EndpointStateInvalid)
+	StateInvalid = State(models.EndpointStateInvalid)
 
 	// IpvlanMapName specifies the tail call map for EP on egress used with ipvlan.
 	IpvlanMapName = "cilium_lxc_ipve_"
 )
 
 // compile time interface check
-var _ notifications.RegenNotificationInfo = &Endpoint{}
+var _ notifications.RegenNotificationInfo = (*Endpoint)(nil)
 
 // Endpoint represents a container or similar which can be individually
 // addresses on L3 with its own IP addresses. This structured is managed by the
@@ -222,7 +228,7 @@ type Endpoint struct {
 	dnsHistoryTrigger *trigger.Trigger
 
 	// state is the state the endpoint is in. See setState()
-	state string
+	state State
 
 	// bpfHeaderfileHash is the hash of the last BPF headerfile that has been
 	// compiled and installed.
@@ -346,6 +352,12 @@ type Endpoint struct {
 	noTrackPort uint16
 }
 
+// EndpointSyncControllerName returns the controller name to synchronize
+// endpoint in to kubernetes.
+func EndpointSyncControllerName(epID uint16) string {
+	return fmt.Sprintf("sync-to-k8s-ciliumendpoint (%v)", epID)
+}
+
 // SetAllocator sets the identity allocator for this endpoint.
 func (e *Endpoint) SetAllocator(allocator cache.IdentityAllocator) {
 	e.unconditionalLock()
@@ -429,7 +441,7 @@ func (e *Endpoint) waitForProxyCompletions(proxyWaitGroup *completion.WaitGroup)
 }
 
 // NewEndpointWithState creates a new endpoint useful for testing purposes
-func NewEndpointWithState(owner regeneration.Owner, proxy EndpointProxy, allocator cache.IdentityAllocator, ID uint16, state string) *Endpoint {
+func NewEndpointWithState(owner regeneration.Owner, proxy EndpointProxy, allocator cache.IdentityAllocator, ID uint16, state State) *Endpoint {
 	ep := createEndpoint(owner, proxy, allocator, ID, "")
 	ep.state = state
 	ep.eventQueue = eventqueue.NewEventQueueBuffered(fmt.Sprintf("endpoint-%d", ID), option.Config.EndpointQueueSize)
@@ -477,9 +489,6 @@ func createEndpoint(owner regeneration.Owner, proxy EndpointProxy, allocator cac
 // CreateHostEndpoint creates the endpoint corresponding to the host.
 func CreateHostEndpoint(owner regeneration.Owner, proxy EndpointProxy, allocator cache.IdentityAllocator) (*Endpoint, error) {
 	ifName := option.Config.HostDevice
-	if option.Config.IsFlannelMasterDeviceSet() {
-		ifName = option.Config.FlannelMasterDevice
-	}
 
 	mac, err := link.GetHardwareAddr(ifName)
 	if err != nil {
@@ -488,10 +497,9 @@ func CreateHostEndpoint(owner regeneration.Owner, proxy EndpointProxy, allocator
 
 	ep := createEndpoint(owner, proxy, allocator, 0, ifName)
 	ep.isHost = true
+	ep.mac = mac
 	ep.nodeMAC = mac
-	ep.DatapathConfiguration = models.EndpointDatapathConfiguration{
-		RequireEgressProg: true,
-	}
+	ep.DatapathConfiguration = NewDatapathConfiguration()
 
 	ep.setState(StateWaitingForIdentity, "Endpoint creation")
 
@@ -800,7 +808,7 @@ func parseBase64ToEndpoint(b []byte, ep *Endpoint) error {
 }
 
 // FilterEPDir returns a list of directories' names that possible belong to an endpoint.
-func FilterEPDir(dirFiles []os.FileInfo) []string {
+func FilterEPDir(dirFiles []os.DirEntry) []string {
 	eptsID := []string{}
 	for _, file := range dirFiles {
 		if file.IsDir() {
@@ -849,6 +857,11 @@ func parseEndpoint(ctx context.Context, owner regeneration.Owner, bEp []byte) (*
 	// If host label is present, it's the host endpoint.
 	ep.isHost = ep.HasLabels(labels.LabelHost)
 
+	if ep.isHost {
+		// Overwrite datapath configuration with the current agent configuration.
+		ep.DatapathConfiguration = NewDatapathConfiguration()
+	}
+
 	// We need to check for nil in Status, CurrentStatuses and Log, since in
 	// some use cases, status will be not nil and Cilium will eventually
 	// error/panic if CurrentStatus or Log are not initialized correctly.
@@ -868,6 +881,28 @@ func parseEndpoint(ctx context.Context, owner regeneration.Owner, bEp []byte) (*
 	ep.setState(StateRestoring, "Endpoint restoring")
 
 	return &ep, nil
+}
+
+// NewDatapathConfiguration return the default endpoint datapath configuration
+// based on whether per-endpoint routes are enabled.
+func NewDatapathConfiguration() models.EndpointDatapathConfiguration {
+	config := models.EndpointDatapathConfiguration{}
+	if option.Config.EnableEndpointRoutes {
+		// Indicate to insert a per endpoint route instead of routing
+		// via cilium_host interface
+		config.InstallEndpointRoute = true
+
+		// Since routing occurs via endpoint interface directly, BPF
+		// program is needed on that device at egress as BPF program on
+		// cilium_host interface is bypassed
+		config.RequireEgressProg = true
+
+		// Delegate routing to the Linux stack rather than tail-calling
+		// between BPF programs.
+		disabled := false
+		config.RequireRouting = &disabled
+	}
+	return config
 }
 
 func (e *Endpoint) LogStatus(typ StatusType, code StatusCode, msg string) {
@@ -899,7 +934,7 @@ func (e *Endpoint) logStatusLocked(typ StatusType, code StatusCode, msg string) 
 			Code:  code,
 			Msg:   msg,
 			Type:  typ,
-			State: e.state,
+			State: string(e.state),
 		},
 		Timestamp: time.Now().UTC(),
 	}
@@ -1243,13 +1278,13 @@ func (e *Endpoint) K8sNamespaceAndPodNameIsSet() bool {
 
 // getState returns the endpoint's state
 // endpoint.mutex may only be rlockAlive()ed
-func (e *Endpoint) getState() string {
+func (e *Endpoint) getState() State {
 	return e.state
 }
 
 // GetState returns the endpoint's state
 // endpoint.mutex may only be rlockAlive()ed
-func (e *Endpoint) GetState() string {
+func (e *Endpoint) GetState() State {
 	e.unconditionalRLock()
 	defer e.runlock()
 	return e.getState()
@@ -1257,14 +1292,14 @@ func (e *Endpoint) GetState() string {
 
 // SetState modifies the endpoint's state. Returns true only if endpoints state
 // was changed as requested
-func (e *Endpoint) SetState(toState, reason string) bool {
+func (e *Endpoint) SetState(toState State, reason string) bool {
 	e.unconditionalLock()
 	defer e.unlock()
 
 	return e.setState(toState, reason)
 }
 
-func (e *Endpoint) setState(toState, reason string) bool {
+func (e *Endpoint) setState(toState State, reason string) bool {
 	// Validate the state transition.
 	fromState := e.state
 
@@ -1301,12 +1336,14 @@ func (e *Endpoint) setState(toState, reason string) bool {
 		// transitioning to StateWaitingToRegenerate, as this means that a
 		// regeneration is already queued up. Callers would then queue up
 		// another unneeded regeneration, which is undesired.
-		case StateWaitingForIdentity, StateDisconnecting, StateRestoring:
+		// Transition to StateWaitingForIdentity is also not allowed as that
+		// will break the ensuing regeneration.
+		case StateDisconnecting, StateRestoring:
 			goto OKState
-		// Don't log this state transition being invalid below so that we don't
+		// Don't log these state transition being invalid below so that we don't
 		// put warnings in the logs for a case which does not result in incorrect
 		// behavior.
-		case StateWaitingToRegenerate:
+		case StateWaitingForIdentity, StateWaitingToRegenerate:
 			return false
 		}
 	case StateRegenerating:
@@ -1343,7 +1380,7 @@ OKState:
 
 	if fromState != "" {
 		metrics.EndpointStateCount.
-			WithLabelValues(fromState).Dec()
+			WithLabelValues(string(fromState)).Dec()
 	}
 
 	// Since StateDisconnected and StateInvalid are final states, after which
@@ -1351,7 +1388,7 @@ OKState:
 	// for these states.
 	if toState != "" && toState != StateDisconnected && toState != StateInvalid {
 		metrics.EndpointStateCount.
-			WithLabelValues(toState).Inc()
+			WithLabelValues(string(toState)).Inc()
 	}
 	return true
 }
@@ -1359,7 +1396,7 @@ OKState:
 // BuilderSetStateLocked modifies the endpoint's state
 // endpoint.mutex must be Lock()ed
 // endpoint buildMutex must be held!
-func (e *Endpoint) BuilderSetStateLocked(toState, reason string) bool {
+func (e *Endpoint) BuilderSetStateLocked(toState State, reason string) bool {
 	// Validate the state transition.
 	fromState := e.state
 	switch fromState { // From state
@@ -1411,7 +1448,7 @@ OKState:
 
 	if fromState != "" {
 		metrics.EndpointStateCount.
-			WithLabelValues(fromState).Dec()
+			WithLabelValues(string(fromState)).Dec()
 	}
 
 	// Since StateDisconnected and StateInvalid are final states, after which
@@ -1419,7 +1456,7 @@ OKState:
 	// for these states.
 	if toState != "" && toState != StateDisconnected && toState != StateInvalid {
 		metrics.EndpointStateCount.
-			WithLabelValues(toState).Inc()
+			WithLabelValues(string(toState)).Inc()
 	}
 	return true
 }
@@ -1665,6 +1702,30 @@ func (e *Endpoint) IsInit() bool {
 	return found && init.Source == labels.LabelSourceReserved
 }
 
+// InitWithNodeLabels initializes the endpoint with the known node labels as
+// well as reserved:host. It should only be used for the host endpoint.
+func (e *Endpoint) InitWithNodeLabels(ctx context.Context, launchTime time.Duration) {
+	if !e.IsHost() {
+		return
+	}
+
+	epLabels := labels.Labels{}
+	epLabels.MergeLabels(labels.LabelHost)
+
+	// Initialize with known node labels.
+	newLabels := labels.Map2Labels(node.GetLabels(), labels.LabelSourceK8s)
+	newIdtyLabels, _ := labelsfilter.Filter(newLabels)
+	epLabels.MergeLabels(newIdtyLabels)
+
+	// Give the endpoint a security identity
+	newCtx, cancel := context.WithTimeout(ctx, launchTime)
+	defer cancel()
+	e.UpdateLabels(newCtx, epLabels, epLabels, true)
+	if errors.Is(newCtx.Err(), context.DeadlineExceeded) {
+		log.WithError(newCtx.Err()).Warning("Timed out while updating security identify for host endpoint")
+	}
+}
+
 // UpdateLabels is called to update the labels of an endpoint. Calls to this
 // function do not necessarily mean that the labels actually changed. The
 // container runtime layer will periodically synchronize labels.
@@ -1906,6 +1967,10 @@ func (e *Endpoint) identityLabelsChanged(ctx context.Context, myChangeRev int) (
 	// assigned.
 	e.forcePolicyComputation()
 
+	// Trigger the sync-to-k8s-ciliumendpoint controller to sync the new
+	// endpoint's identity.
+	e.controllers.TriggerController(EndpointSyncControllerName(e.ID))
+
 	e.unlock()
 
 	if readyToRegenerate {
@@ -2134,15 +2199,15 @@ func (e *Endpoint) Delete(conf DeleteConfig) []error {
 		}
 	}
 
-	if option.Config.IPAM == ipamOption.IPAMENI || option.Config.IPAM == ipamOption.IPAMAzure {
+	if option.Config.IPAM == ipamOption.IPAMENI || option.Config.IPAM == ipamOption.IPAMAzure || option.Config.IPAM == ipamOption.IPAMAlibabaCloud {
 		e.getLogger().WithFields(logrus.Fields{
 			"ep":     e.GetID(),
 			"ipAddr": e.GetIPv4Address(),
 		}).Debug("Deleting endpoint routing rules")
 
 		// This is a best-effort attempt to cleanup. We expect there to be one
-		// ingress rule and one egress rule. If we find more than one rule in
-		// either case, then the rules will be left as-is because there was
+		// ingress rule and multiple egress rules. If we find more rules than
+		// expected, then the rules will be left as-is because there was
 		// likely manual intervention.
 		if err := linuxrouting.Delete(e.IPv4.IP(), option.Config.EgressMultiHomeIPRuleCompat); err != nil {
 			errs = append(errs, fmt.Errorf("unable to delete endpoint routing rules: %s", err))
@@ -2178,11 +2243,6 @@ func (e *Endpoint) Delete(conf DeleteConfig) []error {
 		errs = append(errs, fmt.Errorf("unable to remove proxy redirects: %s", err))
 	}
 	cancel()
-
-	if option.Config.IsFlannelMasterDeviceSet() &&
-		option.Config.FlannelUninstallOnExit {
-		e.DeleteBPFProgramLocked()
-	}
 
 	return errs
 }

@@ -1,4 +1,4 @@
-// Copyright 2016-2020 Authors of Cilium
+// Copyright 2016-2021 Authors of Cilium
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,11 +28,14 @@ import (
 	"github.com/cilium/cilium/pkg/cidr"
 	"github.com/cilium/cilium/pkg/controller"
 	"github.com/cilium/cilium/pkg/datapath"
+	"github.com/cilium/cilium/pkg/egresspolicy"
 	"github.com/cilium/cilium/pkg/endpoint"
+	"github.com/cilium/cilium/pkg/ip"
 	"github.com/cilium/cilium/pkg/k8s"
 	k8smetrics "github.com/cilium/cilium/pkg/k8s/metrics"
 	slim_corev1 "github.com/cilium/cilium/pkg/k8s/slim/k8s/api/core/v1"
 	"github.com/cilium/cilium/pkg/k8s/synced"
+	k8sTypes "github.com/cilium/cilium/pkg/k8s/types"
 	"github.com/cilium/cilium/pkg/k8s/utils"
 	"github.com/cilium/cilium/pkg/labels"
 	"github.com/cilium/cilium/pkg/loadbalancer"
@@ -47,6 +50,8 @@ import (
 	"github.com/cilium/cilium/pkg/redirectpolicy"
 
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/tools/cache"
 	k8s_metrics "k8s.io/client-go/tools/metrics"
@@ -64,7 +69,9 @@ const (
 	k8sAPIGroupCiliumNodeV2                     = "cilium/v2::CiliumNode"
 	k8sAPIGroupCiliumEndpointV2                 = "cilium/v2::CiliumEndpoint"
 	k8sAPIGroupCiliumLocalRedirectPolicyV2      = "cilium/v2::CiliumLocalRedirectPolicy"
+	k8sAPIGroupCiliumEgressNATPolicyV2          = "cilium/v2::CiliumEgressNATPolicy"
 	K8sAPIGroupEndpointSliceV1Beta1Discovery    = "discovery/v1beta1::EndpointSlice"
+	K8sAPIGroupEndpointSliceV1Discovery         = "discovery/v1::EndpointSlice"
 
 	metricCNP            = "CiliumNetworkPolicy"
 	metricCCNP           = "CiliumClusterwideNetworkPolicy"
@@ -75,6 +82,7 @@ const (
 	metricCiliumNode     = "CiliumNode"
 	metricCiliumEndpoint = "CiliumEndpoint"
 	metricCLRP           = "CiliumLocalRedirectPolicy"
+	metricCENP           = "CiliumEgressNATPolicy"
 	metricPod            = "Pod"
 	metricNode           = "Node"
 	metricService        = "Service"
@@ -146,6 +154,21 @@ type redirectPolicyManager interface {
 	OnAddPod(pod *slim_corev1.Pod)
 }
 
+type bgpSpeakerManager interface {
+	OnUpdateService(svc *slim_corev1.Service)
+	OnDeleteService(svc *slim_corev1.Service)
+
+	OnUpdateEndpoints(eps *slim_corev1.Endpoints)
+
+	OnUpdateNode(node *corev1.Node)
+}
+type egressPolicyManager interface {
+	AddEgressPolicy(config egresspolicy.Config) (bool, error)
+	DeleteEgressPolicy(configID types.NamespacedName) error
+	OnUpdateEndpoint(endpoint *k8sTypes.CiliumEndpoint)
+	OnDeleteEndpoint(endpoint *k8sTypes.CiliumEndpoint)
+}
+
 type K8sWatcher struct {
 	// k8sResourceSynced maps a resource name to a channel. Once the given
 	// resource name is synchronized with k8s, the channel for which that
@@ -168,6 +191,8 @@ type K8sWatcher struct {
 	policyRepository      policyRepository
 	svcManager            svcManager
 	redirectPolicyManager redirectPolicyManager
+	bgpSpeakerManager     bgpSpeakerManager
+	egressPolicyManager   egressPolicyManager
 
 	// controllersStarted is a channel that is closed when all controllers, i.e.,
 	// k8s watchers have started listening for k8s events.
@@ -179,6 +204,8 @@ type K8sWatcher struct {
 	// variable is written for the first time.
 	podStoreSet  chan struct{}
 	podStoreOnce sync.Once
+
+	nodeStore cache.Store
 
 	namespaceStore cache.Store
 	datapath       datapath.Datapath
@@ -196,6 +223,8 @@ func NewK8sWatcher(
 	svcManager svcManager,
 	datapath datapath.Datapath,
 	redirectPolicyManager redirectPolicyManager,
+	bgpSpeakerManager bgpSpeakerManager,
+	egressPolicyManager egressPolicyManager,
 	cfg WatcherConfiguration,
 ) *K8sWatcher {
 	return &K8sWatcher{
@@ -209,6 +238,8 @@ func NewK8sWatcher(
 		podStoreSet:           make(chan struct{}),
 		datapath:              datapath,
 		redirectPolicyManager: redirectPolicyManager,
+		bgpSpeakerManager:     bgpSpeakerManager,
+		egressPolicyManager:   egressPolicyManager,
 		cfg:                   cfg,
 	}
 }
@@ -217,11 +248,11 @@ func NewK8sWatcher(
 // k8s client-go package
 type k8sMetrics struct{}
 
-func (*k8sMetrics) Observe(verb string, u url.URL, latency time.Duration) {
+func (*k8sMetrics) Observe(_ context.Context, verb string, u url.URL, latency time.Duration) {
 	metrics.KubernetesAPIInteractions.WithLabelValues(u.Path, verb).Observe(latency.Seconds())
 }
 
-func (*k8sMetrics) Increment(code string, method string, host string) {
+func (*k8sMetrics) Increment(_ context.Context, code string, method string, host string) {
 	metrics.KubernetesAPICallsTotal.WithLabelValues(host, method, code).Inc()
 	// The 'code' is set to '<error>' in case an error is returned from k8s
 	// more info:
@@ -292,6 +323,7 @@ func (k *K8sWatcher) InitK8sSubsystem(ctx context.Context) <-chan struct{} {
 			// with the right service -> backend (k8s endpoints) translation.
 			K8sAPIGroupEndpointV1Core,
 			K8sAPIGroupEndpointSliceV1Beta1Discovery,
+			K8sAPIGroupEndpointSliceV1Discovery,
 			// We need all network policies in place before restoring to make sure
 			// we are enforcing the correct policies for each endpoint before
 			// restarting.
@@ -313,6 +345,9 @@ func (k *K8sWatcher) InitK8sSubsystem(ctx context.Context) <-chan struct{} {
 			// We need to know about active local redirect policy services
 			// before BPF LB datapath is synced.
 			k8sAPIGroupCiliumLocalRedirectPolicyV2,
+			// We need to know the node labels to populate the host endpoint
+			// labels.
+			k8sAPIGroupNodeV1Core,
 		)
 		// CiliumEndpoint is used to synchronize the ipcache, wait for
 		// it unless it is disabled
@@ -405,12 +440,16 @@ func (k *K8sWatcher) EnableK8sWatcher(ctx context.Context) error {
 		k.ciliumLocalRedirectPolicyInit(ciliumNPClient)
 	}
 
+	if option.Config.EnableEgressGateway {
+		k.ciliumEgressNATPolicyInit(ciliumNPClient)
+	}
+
 	// kubernetes pods
 	asyncControllers.Add(1)
 	go k.podsInit(k8s.WatcherClient(), asyncControllers)
 
 	// kubernetes nodes
-	k.nodesInit(k8s.WatcherClient())
+	k.NodesInit(k8s.Client())
 
 	// kubernetes namespaces
 	asyncControllers.Add(1)
@@ -514,8 +553,10 @@ func (k *K8sWatcher) delK8sSVCs(svc k8s.ServiceID, svcInfo *k8s.Service, se *k8s
 		}
 		repPorts[svcPort.Port] = false
 
-		fe := loadbalancer.NewL3n4Addr(svcPort.Protocol, svcInfo.FrontendIP, svcPort.Port, loadbalancer.ScopeExternal)
-		frontends = append(frontends, fe)
+		for _, feIP := range svcInfo.FrontendIPs {
+			fe := loadbalancer.NewL3n4Addr(svcPort.Protocol, feIP, svcPort.Port, loadbalancer.ScopeExternal)
+			frontends = append(frontends, fe)
+		}
 
 		for _, nodePortFE := range svcInfo.NodePorts[portName] {
 			frontends = append(frontends, &nodePortFE.L3n4Addr)
@@ -570,15 +611,19 @@ func genCartesianProduct(
 	}
 
 	svcs := make([]loadbalancer.SVC, 0, svcSize)
+	feFamilyIPv6 := ip.IsIPv6(fe)
 
 	for fePortName, fePort := range ports {
 		var besValues []loadbalancer.Backend
-		for ip, backend := range bes.Backends {
-			if backendPort := backend.Ports[string(fePortName)]; backendPort != nil {
+		for netIP, backend := range bes.Backends {
+			parsedIP := net.ParseIP(netIP)
+
+			if backendPort := backend.Ports[string(fePortName)]; backendPort != nil && feFamilyIPv6 == ip.IsIPv6(parsedIP) {
 				besValues = append(besValues, loadbalancer.Backend{
 					NodeName: backend.NodeName,
 					L3n4Addr: loadbalancer.L3n4Addr{
-						IP: net.ParseIP(ip), L4Addr: *backendPort,
+						IP:     parsedIP,
+						L4Addr: *backendPort,
 					},
 				})
 			}
@@ -637,10 +682,12 @@ func datapathSVCs(svc *k8s.Service, endpoints *k8s.Endpoints) (svcs []loadbalanc
 		uniqPorts[fePort.Port] = false
 		clusterIPPorts[fePortName] = fePort
 	}
-	if svc.FrontendIP != nil {
-		dpSVC := genCartesianProduct(svc.FrontendIP, svc.TrafficPolicy, loadbalancer.SVCTypeClusterIP, clusterIPPorts, endpoints)
+
+	for _, frontendIP := range svc.FrontendIPs {
+		dpSVC := genCartesianProduct(frontendIP, svc.TrafficPolicy, loadbalancer.SVCTypeClusterIP, clusterIPPorts, endpoints)
 		svcs = append(svcs, dpSVC...)
 	}
+
 	for _, ip := range svc.LoadBalancerIPs {
 		dpSVC := genCartesianProduct(ip, svc.TrafficPolicy, loadbalancer.SVCTypeLoadBalancer, clusterIPPorts, endpoints)
 		svcs = append(svcs, dpSVC...)

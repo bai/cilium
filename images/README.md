@@ -11,8 +11,8 @@ anyone reading this document should also read [`cilium/image-tools` documentatio
 
 This image is based on `runtime` image.
 
-It adds `protoc`, Go toolchain, and includes `ineffassign`. The aim is to
-include all the Go linters as well.
+It adds `protoc` and plugins, Go toolchain, and includes `ineffassign`.
+The aim is to include all the Go linters as well.
 
 ### [`runtime`](runtime/Dockerfile)
 
@@ -25,7 +25,7 @@ debugging as well as Ubuntu user-space for troubleshooting.
 
 ### [`cilium`](cilium/Dockerfile)
 
-It includes `cilium-agent` and other binaries, including `cilium`, `envoy`, 
+It includes `cilium-agent` and other binaries, including `cilium`, `envoy`,
 `cilium-health` and `hubble-cli`.
 
 This image is based on `runtime` image, and it contains Ubuntu user-space for
@@ -60,7 +60,7 @@ If you are making a routine update to the build and runtime images, you can
 update all dependent images in the same PR, as long as overall scope of the PR
 is just an update to some dependencies and not an implementation of a feature.
 
-The process is described in the [official documentation](https://docs.cilium.io/en/latest/contributing/development/images/#update-cilium-builder-and-cilium-runtime-images) 
+The process is described in the [official documentation](https://docs.cilium.io/en/latest/contributing/development/images/#update-cilium-builder-and-cilium-runtime-images)
 
 ### Building Locally
 

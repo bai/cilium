@@ -97,6 +97,12 @@ type ENISpec struct {
 	// +kubebuilder:validation:Optional
 	SecurityGroupTags map[string]string `json:"security-group-tags,omitempty"`
 
+	// SubnetIDs is the list of subnet ids to use when evaluating what AWS
+	// subnets to use for ENI and IP allocation.
+	//
+	// +kubebuilder:validation:Optional
+	SubnetIDs []string `json:"subnet-ids,omitempty"`
+
 	// SubnetTags is the list of tags to use when evaluating what AWS
 	// subnets to use for ENI and IP allocation.
 	//
@@ -168,8 +174,7 @@ type ENI struct {
 	// +optional
 	VPC AwsVPC `json:"vpc,omitempty"`
 
-	// Addresses is the list of all IPs associated with the ENI, including
-	// all secondary addresses
+	// Addresses is the list of all secondary IPs associated with the ENI
 	//
 	// +optional
 	Addresses []string `json:"addresses,omitempty"`

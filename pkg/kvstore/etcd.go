@@ -20,11 +20,11 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/cilium/cilium/pkg/contexthelpers"
@@ -85,7 +85,8 @@ var (
 	// versionCheckTimeout is the time we wait trying to verify the version
 	// of an etcd endpoint. The timeout can be encountered on network
 	// connectivity problems.
-	versionCheckTimeout = 30 * time.Second
+	// This field needs to be accessed with the atomic library.
+	versionCheckTimeout = int64(30 * time.Second)
 
 	// statusCheckTimeout is the timeout when performing status checks with
 	// all etcd endpoints
@@ -188,20 +189,14 @@ type clientOptions struct {
 func (e *etcdModule) newClient(ctx context.Context, opts *ExtraOptions) (BackendOperations, chan error) {
 	errChan := make(chan error, 10)
 
-	endpointsOpt, endpointsSet := e.opts[EtcdAddrOption]
-	configPathOpt, configSet := e.opts[EtcdOptionConfig]
-
-	rateLimitOpt, rateLimitSet := e.opts[EtcdRateLimitOption]
-
 	clientOptions := clientOptions{
 		KeepAliveHeartbeat: 15 * time.Second,
 		KeepAliveTimeout:   25 * time.Second,
 		RateLimit:          defaults.KVstoreQPS,
 	}
 
-	if rateLimitSet {
-		// error is discarded here because this option has validation
-		clientOptions.RateLimit, _ = strconv.Atoi(rateLimitOpt.value)
+	if o, ok := e.opts[EtcdRateLimitOption]; ok && o.value != "" {
+		clientOptions.RateLimit, _ = strconv.Atoi(o.value)
 	}
 
 	if o, ok := e.opts[etcdOptionKeepAliveTimeout]; ok && o.value != "" {
@@ -211,6 +206,9 @@ func (e *etcdModule) newClient(ctx context.Context, opts *ExtraOptions) (Backend
 	if o, ok := e.opts[etcdOptionKeepAliveHeartbeat]; ok && o.value != "" {
 		clientOptions.KeepAliveHeartbeat, _ = time.ParseDuration(o.value)
 	}
+
+	endpointsOpt, endpointsSet := e.opts[EtcdAddrOption]
+	configPathOpt, configSet := e.opts[EtcdOptionConfig]
 
 	var configPath string
 	if configSet {
@@ -236,6 +234,13 @@ func (e *etcdModule) newClient(ctx context.Context, opts *ExtraOptions) (Backend
 	if e.config.Endpoints == nil && endpointsSet {
 		e.config.Endpoints = []string{endpointsOpt.value}
 	}
+
+	log.WithFields(logrus.Fields{
+		"ConfigPath":         configPath,
+		"KeepAliveHeartbeat": clientOptions.KeepAliveHeartbeat,
+		"KeepAliveTimeout":   clientOptions.KeepAliveTimeout,
+		"RateLimit":          clientOptions.RateLimit,
+	}).Info("Creating etcd client")
 
 	for {
 		// connectEtcdClient will close errChan when the connection attempt has
@@ -850,7 +855,8 @@ func (e *etcdClient) checkMinVersion(ctx context.Context) error {
 	eps := e.client.Endpoints()
 
 	for _, ep := range eps {
-		v, err := getEPVersion(ctx, e.client.Maintenance, ep, versionCheckTimeout)
+		vcTimeout := atomic.LoadInt64(&versionCheckTimeout)
+		v, err := getEPVersion(ctx, e.client.Maintenance, ep, time.Duration(vcTimeout))
 		if err != nil {
 			e.getLogger().WithError(Hint(err)).WithField(fieldEtcdEndpoint, ep).
 				Warn("Unable to verify version of etcd endpoint")
@@ -1786,7 +1792,7 @@ func newConfig(fpath string) (*client.Config, error) {
 	}
 
 	yc := &yamlConfig{}
-	b, err := ioutil.ReadFile(fpath)
+	b, err := os.ReadFile(fpath)
 	if err != nil {
 		return nil, err
 	}
@@ -1811,7 +1817,7 @@ func newConfig(fpath string) (*client.Config, error) {
 // reload on-disk certificate and key when needed
 func getClientCertificateReloader(fpath string) (func(*tls.CertificateRequestInfo) (*tls.Certificate, error), error) {
 	yc := &yamlKeyPairConfig{}
-	b, err := ioutil.ReadFile(fpath)
+	b, err := os.ReadFile(fpath)
 	if err != nil {
 		return nil, err
 	}

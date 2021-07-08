@@ -34,7 +34,7 @@ type DescribeFastSnapshotRestoresInput struct {
 	// actually making the request, and provides an error response. If you have the
 	// required permissions, the error response is DryRunOperation. Otherwise, it is
 	// UnauthorizedOperation.
-	DryRun bool
+	DryRun *bool
 
 	// The filters. The possible values are:
 	//
@@ -165,6 +165,10 @@ type DescribeFastSnapshotRestoresPaginator struct {
 // NewDescribeFastSnapshotRestoresPaginator returns a new
 // DescribeFastSnapshotRestoresPaginator
 func NewDescribeFastSnapshotRestoresPaginator(client DescribeFastSnapshotRestoresAPIClient, params *DescribeFastSnapshotRestoresInput, optFns ...func(*DescribeFastSnapshotRestoresPaginatorOptions)) *DescribeFastSnapshotRestoresPaginator {
+	if params == nil {
+		params = &DescribeFastSnapshotRestoresInput{}
+	}
+
 	options := DescribeFastSnapshotRestoresPaginatorOptions{}
 	if params.MaxResults != nil {
 		options.Limit = *params.MaxResults
@@ -172,10 +176,6 @@ func NewDescribeFastSnapshotRestoresPaginator(client DescribeFastSnapshotRestore
 
 	for _, fn := range optFns {
 		fn(&options)
-	}
-
-	if params == nil {
-		params = &DescribeFastSnapshotRestoresInput{}
 	}
 
 	return &DescribeFastSnapshotRestoresPaginator{

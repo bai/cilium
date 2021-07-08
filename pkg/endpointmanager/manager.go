@@ -30,8 +30,6 @@ import (
 	"github.com/cilium/cilium/pkg/endpoint/regeneration"
 	"github.com/cilium/cilium/pkg/endpointmanager/idallocator"
 	"github.com/cilium/cilium/pkg/identity/cache"
-	"github.com/cilium/cilium/pkg/labels"
-	"github.com/cilium/cilium/pkg/labelsfilter"
 	"github.com/cilium/cilium/pkg/lock"
 	"github.com/cilium/cilium/pkg/logging"
 	"github.com/cilium/cilium/pkg/logging/logfields"
@@ -630,23 +628,18 @@ func (mgr *EndpointManager) AddHostEndpoint(ctx context.Context, owner regenerat
 		return err
 	}
 
-	epLabels := labels.Labels{}
-	epLabels.MergeLabels(labels.LabelHost)
+	node.SetEndpointID(ep.GetID())
 
-	// Initialize with known node labels.
-	newLabels := labels.Map2Labels(node.GetLabels(), labels.LabelSourceK8s)
-	newIdtyLabels, _ := labelsfilter.Filter(newLabels)
-	epLabels.MergeLabels(newIdtyLabels)
-
-	// Give the endpoint a security identity
-	newCtx, cancel := context.WithTimeout(ctx, launchTime)
-	defer cancel()
-	ep.UpdateLabels(newCtx, epLabels, epLabels, true)
-	if errors.Is(newCtx.Err(), context.DeadlineExceeded) {
-		log.WithError(newCtx.Err()).Warning("Timed out while updating security identify for host endpoint")
-	}
+	ep.InitWithNodeLabels(ctx, launchTime)
 
 	return nil
+}
+
+// InitHostEndpointLabels initializes the host endpoint's labels with the
+// node's known labels.
+func (mgr *EndpointManager) InitHostEndpointLabels(ctx context.Context) {
+	ep := mgr.GetHostEndpoint()
+	ep.InitWithNodeLabels(ctx, launchTime)
 }
 
 // WaitForEndpointsAtPolicyRev waits for all endpoints which existed at the time

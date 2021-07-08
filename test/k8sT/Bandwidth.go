@@ -15,7 +15,6 @@
 package k8sTest
 
 import (
-	"context"
 	"fmt"
 
 	. "github.com/cilium/cilium/test/ginkgo-ext"
@@ -44,8 +43,6 @@ var _ = Describe("K8sBandwidthTest", func() {
 	AfterAll(func() {
 		_ = kubectl.Delete(demoYAML)
 		ExpectAllPodsTerminated(kubectl)
-
-		UninstallCiliumFromManifest(kubectl, ciliumFilename)
 		kubectl.CloseSSHClient()
 	})
 
@@ -61,10 +58,6 @@ var _ = Describe("K8sBandwidthTest", func() {
 		)
 
 		var (
-			backgroundCancel       context.CancelFunc = func() {}
-			backgroundError        error
-			enableBackgroundReport = true
-
 			podLabels = []string{
 				testDS10,
 				testDS25,
@@ -75,16 +68,12 @@ var _ = Describe("K8sBandwidthTest", func() {
 			kubectl.CiliumReport("cilium bpf bandwidth list", "cilium endpoint list")
 		})
 
-		JustBeforeEach(func() {
-			if enableBackgroundReport {
-				backgroundCancel, backgroundError = kubectl.BackgroundReport("uptime")
-				Expect(backgroundError).To(BeNil(), "Cannot start background report process")
-			}
-		})
-
 		JustAfterEach(func() {
 			kubectl.ValidateNoErrorsInLogs(CurrentGinkgoTestDescription().Duration)
-			backgroundCancel()
+		})
+
+		AfterAll(func() {
+			UninstallCiliumFromManifest(kubectl, ciliumFilename)
 		})
 
 		waitForTestPods := func() {

@@ -34,6 +34,7 @@ import (
 
 const (
 	keyPprof                  = "pprof"
+	keyPprofPort              = "pprof-port"
 	keyGops                   = "gops"
 	keyGopsPort               = "gops-port"
 	keyDialTimeout            = "dial-timeout"
@@ -64,6 +65,9 @@ func New(vp *viper.Viper) *cobra.Command {
 	flags := cmd.Flags()
 	flags.Bool(
 		keyPprof, false, "Enable serving the pprof debugging API",
+	)
+	flags.Int(
+		keyPprofPort, defaults.PprofPort, "Port that the pprof listens on",
 	)
 	flags.Bool(
 		keyGops, true, "Run gops agent",
@@ -137,7 +141,9 @@ func New(vp *viper.Viper) *cobra.Command {
 }
 
 func runServe(vp *viper.Viper) error {
-	logging.ConfigureLogLevel(vp.GetBool("debug"))
+	if vp.GetBool("debug") {
+		logging.SetLogLevelToDebug()
+	}
 	logger := logging.DefaultLogger.WithField(logfields.LogSubsys, "hubble-relay")
 
 	opts := []server.Option{
@@ -185,7 +191,7 @@ func runServe(vp *viper.Viper) error {
 	}
 
 	if vp.GetBool(keyPprof) {
-		pprof.Enable()
+		pprof.Enable(vp.GetInt(keyPprofPort))
 	}
 	gopsEnabled := vp.GetBool(keyGops)
 	if gopsEnabled {

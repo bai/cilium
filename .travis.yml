@@ -3,7 +3,7 @@ language: go
 dist: focal
 sudo: required
 
-go: "1.16"
+go: "1.16.5"
 
 jobs:
   include:
@@ -16,20 +16,17 @@ jobs:
       if: type != pull_request
       env:
         - RACE=1
-        - BASE_IMAGE=quay.io/cilium/cilium-runtime:7f84e5f2c9027e75b271a460d83c086f29127d3a@sha256:a1d73d2840b4b075ade33bd8f968ca6db3d9bca9f3ed14f168d14526b3208cc0
+        - BASE_IMAGE=quay.io/cilium/cilium-runtime:28b5a8658b596d12d80b0e7dad3efc2e77ec2d65@sha256:fbf8eee141101fade247dbe94cf84ca3bdcd92b96108996c50859ab7edd607d0
         - LOCKDEBUG=1
     - arch: arm64-graviton2
       name: "arm64-graviton2-race"
       if: type != pull_request
       env:
         - RACE=1
-        - BASE_IMAGE=quay.io/cilium/cilium-runtime:7f84e5f2c9027e75b271a460d83c086f29127d3a@sha256:a1d73d2840b4b075ade33bd8f968ca6db3d9bca9f3ed14f168d14526b3208cc0
+        - BASE_IMAGE=quay.io/cilium/cilium-runtime:28b5a8658b596d12d80b0e7dad3efc2e77ec2d65@sha256:fbf8eee141101fade247dbe94cf84ca3bdcd92b96108996c50859ab7edd607d0
         - LOCKDEBUG=1
       virt: vm
       group: edge
-  allow_failures:
-    - name: "amd64-race"
-    - name: "arm64-graviton2-race"
 
 if: branch = master OR type = pull_request
 
@@ -47,3 +44,6 @@ before_script:
   - export PATH=/usr/local/clang/bin:$PATH
 
 script: ./.travis/build.sh
+
+notifications:
+  email: false

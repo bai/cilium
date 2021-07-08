@@ -1210,6 +1210,26 @@ func (m *validateOpCreateNetworkInterfacePermission) HandleInitialize(ctx contex
 	return next.HandleInitialize(ctx, in)
 }
 
+type validateOpCreateReplaceRootVolumeTask struct {
+}
+
+func (*validateOpCreateReplaceRootVolumeTask) ID() string {
+	return "OperationInputValidation"
+}
+
+func (m *validateOpCreateReplaceRootVolumeTask) HandleInitialize(ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
+	out middleware.InitializeOutput, metadata middleware.Metadata, err error,
+) {
+	input, ok := in.Parameters.(*CreateReplaceRootVolumeTaskInput)
+	if !ok {
+		return out, metadata, fmt.Errorf("unknown input parameters type %T", in.Parameters)
+	}
+	if err := validateOpCreateReplaceRootVolumeTaskInput(input); err != nil {
+		return out, metadata, err
+	}
+	return next.HandleInitialize(ctx, in)
+}
+
 type validateOpCreateReservedInstancesListing struct {
 }
 
@@ -1225,6 +1245,26 @@ func (m *validateOpCreateReservedInstancesListing) HandleInitialize(ctx context.
 		return out, metadata, fmt.Errorf("unknown input parameters type %T", in.Parameters)
 	}
 	if err := validateOpCreateReservedInstancesListingInput(input); err != nil {
+		return out, metadata, err
+	}
+	return next.HandleInitialize(ctx, in)
+}
+
+type validateOpCreateRestoreImageTask struct {
+}
+
+func (*validateOpCreateRestoreImageTask) ID() string {
+	return "OperationInputValidation"
+}
+
+func (m *validateOpCreateRestoreImageTask) HandleInitialize(ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
+	out middleware.InitializeOutput, metadata middleware.Metadata, err error,
+) {
+	input, ok := in.Parameters.(*CreateRestoreImageTaskInput)
+	if !ok {
+		return out, metadata, fmt.Errorf("unknown input parameters type %T", in.Parameters)
+	}
+	if err := validateOpCreateRestoreImageTaskInput(input); err != nil {
 		return out, metadata, err
 	}
 	return next.HandleInitialize(ctx, in)
@@ -1345,6 +1385,26 @@ func (m *validateOpCreateSpotDatafeedSubscription) HandleInitialize(ctx context.
 		return out, metadata, fmt.Errorf("unknown input parameters type %T", in.Parameters)
 	}
 	if err := validateOpCreateSpotDatafeedSubscriptionInput(input); err != nil {
+		return out, metadata, err
+	}
+	return next.HandleInitialize(ctx, in)
+}
+
+type validateOpCreateStoreImageTask struct {
+}
+
+func (*validateOpCreateStoreImageTask) ID() string {
+	return "OperationInputValidation"
+}
+
+func (m *validateOpCreateStoreImageTask) HandleInitialize(ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
+	out middleware.InitializeOutput, metadata middleware.Metadata, err error,
+) {
+	input, ok := in.Parameters.(*CreateStoreImageTaskInput)
+	if !ok {
+		return out, metadata, fmt.Errorf("unknown input parameters type %T", in.Parameters)
+	}
+	if err := validateOpCreateStoreImageTaskInput(input); err != nil {
 		return out, metadata, err
 	}
 	return next.HandleInitialize(ctx, in)
@@ -3790,6 +3850,26 @@ func (m *validateOpGetDefaultCreditSpecification) HandleInitialize(ctx context.C
 	return next.HandleInitialize(ctx, in)
 }
 
+type validateOpGetFlowLogsIntegrationTemplate struct {
+}
+
+func (*validateOpGetFlowLogsIntegrationTemplate) ID() string {
+	return "OperationInputValidation"
+}
+
+func (m *validateOpGetFlowLogsIntegrationTemplate) HandleInitialize(ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
+	out middleware.InitializeOutput, metadata middleware.Metadata, err error,
+) {
+	input, ok := in.Parameters.(*GetFlowLogsIntegrationTemplateInput)
+	if !ok {
+		return out, metadata, fmt.Errorf("unknown input parameters type %T", in.Parameters)
+	}
+	if err := validateOpGetFlowLogsIntegrationTemplateInput(input); err != nil {
+		return out, metadata, err
+	}
+	return next.HandleInitialize(ctx, in)
+}
+
 type validateOpGetGroupsForCapacityReservation struct {
 }
 
@@ -6170,8 +6250,16 @@ func addOpCreateNetworkInterfacePermissionValidationMiddleware(stack *middleware
 	return stack.Initialize.Add(&validateOpCreateNetworkInterfacePermission{}, middleware.After)
 }
 
+func addOpCreateReplaceRootVolumeTaskValidationMiddleware(stack *middleware.Stack) error {
+	return stack.Initialize.Add(&validateOpCreateReplaceRootVolumeTask{}, middleware.After)
+}
+
 func addOpCreateReservedInstancesListingValidationMiddleware(stack *middleware.Stack) error {
 	return stack.Initialize.Add(&validateOpCreateReservedInstancesListing{}, middleware.After)
+}
+
+func addOpCreateRestoreImageTaskValidationMiddleware(stack *middleware.Stack) error {
+	return stack.Initialize.Add(&validateOpCreateRestoreImageTask{}, middleware.After)
 }
 
 func addOpCreateRouteValidationMiddleware(stack *middleware.Stack) error {
@@ -6196,6 +6284,10 @@ func addOpCreateSnapshotsValidationMiddleware(stack *middleware.Stack) error {
 
 func addOpCreateSpotDatafeedSubscriptionValidationMiddleware(stack *middleware.Stack) error {
 	return stack.Initialize.Add(&validateOpCreateSpotDatafeedSubscription{}, middleware.After)
+}
+
+func addOpCreateStoreImageTaskValidationMiddleware(stack *middleware.Stack) error {
+	return stack.Initialize.Add(&validateOpCreateStoreImageTask{}, middleware.After)
 }
 
 func addOpCreateSubnetValidationMiddleware(stack *middleware.Stack) error {
@@ -6686,6 +6778,10 @@ func addOpGetDefaultCreditSpecificationValidationMiddleware(stack *middleware.St
 	return stack.Initialize.Add(&validateOpGetDefaultCreditSpecification{}, middleware.After)
 }
 
+func addOpGetFlowLogsIntegrationTemplateValidationMiddleware(stack *middleware.Stack) error {
+	return stack.Initialize.Add(&validateOpGetFlowLogsIntegrationTemplate{}, middleware.After)
+}
+
 func addOpGetGroupsForCapacityReservationValidationMiddleware(stack *middleware.Stack) error {
 	return stack.Initialize.Add(&validateOpGetGroupsForCapacityReservation{}, middleware.After)
 }
@@ -7146,6 +7242,41 @@ func validateAddPrefixListEntry(v *types.AddPrefixListEntry) error {
 	}
 }
 
+func validateAthenaIntegration(v *types.AthenaIntegration) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "AthenaIntegration"}
+	if v.IntegrationResultS3DestinationArn == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("IntegrationResultS3DestinationArn"))
+	}
+	if len(v.PartitionLoadFrequency) == 0 {
+		invalidParams.Add(smithy.NewErrParamRequired("PartitionLoadFrequency"))
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
+func validateAthenaIntegrationsSet(v []types.AthenaIntegration) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "AthenaIntegrationsSet"}
+	for i := range v {
+		if err := validateAthenaIntegration(&v[i]); err != nil {
+			invalidParams.AddNested(fmt.Sprintf("[%d]", i), err.(smithy.InvalidParamsError))
+		}
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
 func validateCidrAuthorizationContext(v *types.CidrAuthorizationContext) error {
 	if v == nil {
 		return nil
@@ -7221,6 +7352,9 @@ func validateDiskImageDetail(v *types.DiskImageDetail) error {
 		return nil
 	}
 	invalidParams := smithy.InvalidParamsError{Context: "DiskImageDetail"}
+	if v.Bytes == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("Bytes"))
+	}
 	if len(v.Format) == 0 {
 		invalidParams.Add(smithy.NewErrParamRequired("Format"))
 	}
@@ -7347,6 +7481,23 @@ func validateExportTaskS3LocationRequest(v *types.ExportTaskS3LocationRequest) e
 	}
 }
 
+func validateIntegrateServices(v *types.IntegrateServices) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "IntegrateServices"}
+	if v.AthenaIntegrations != nil {
+		if err := validateAthenaIntegrationsSet(v.AthenaIntegrations); err != nil {
+			invalidParams.AddNested("AthenaIntegrations", err.(smithy.InvalidParamsError))
+		}
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
 func validateLaunchTemplateElasticInferenceAccelerator(v *types.LaunchTemplateElasticInferenceAccelerator) error {
 	if v == nil {
 		return nil
@@ -7384,6 +7535,9 @@ func validatePurchaseRequest(v *types.PurchaseRequest) error {
 		return nil
 	}
 	invalidParams := smithy.InvalidParamsError{Context: "PurchaseRequest"}
+	if v.InstanceCount == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("InstanceCount"))
+	}
 	if v.PurchaseToken == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("PurchaseToken"))
 	}
@@ -7492,6 +7646,9 @@ func validateRunInstancesMonitoringEnabled(v *types.RunInstancesMonitoringEnable
 		return nil
 	}
 	invalidParams := smithy.InvalidParamsError{Context: "RunInstancesMonitoringEnabled"}
+	if v.Enabled == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("Enabled"))
+	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
 	} else {
@@ -7540,6 +7697,9 @@ func validateSpotFleetRequestConfigData(v *types.SpotFleetRequestConfigData) err
 	if v.IamFleetRole == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("IamFleetRole"))
 	}
+	if v.TargetCapacity == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("TargetCapacity"))
+	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
 	} else {
@@ -7552,6 +7712,9 @@ func validateTargetCapacitySpecificationRequest(v *types.TargetCapacitySpecifica
 		return nil
 	}
 	invalidParams := smithy.InvalidParamsError{Context: "TargetCapacitySpecificationRequest"}
+	if v.TotalTargetCapacity == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("TotalTargetCapacity"))
+	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
 	} else {
@@ -7596,6 +7759,9 @@ func validateVolumeDetail(v *types.VolumeDetail) error {
 		return nil
 	}
 	invalidParams := smithy.InvalidParamsError{Context: "VolumeDetail"}
+	if v.Size == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("Size"))
+	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
 	} else {
@@ -7693,6 +7859,9 @@ func validateOpAllocateHostsInput(v *AllocateHostsInput) error {
 	invalidParams := smithy.InvalidParamsError{Context: "AllocateHostsInput"}
 	if v.AvailabilityZone == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("AvailabilityZone"))
+	}
+	if v.Quantity == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("Quantity"))
 	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
@@ -7916,6 +8085,9 @@ func validateOpAttachNetworkInterfaceInput(v *AttachNetworkInterfaceInput) error
 		return nil
 	}
 	invalidParams := smithy.InvalidParamsError{Context: "AttachNetworkInterfaceInput"}
+	if v.DeviceIndex == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("DeviceIndex"))
+	}
 	if v.InstanceId == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("InstanceId"))
 	}
@@ -8102,6 +8274,9 @@ func validateOpCancelSpotFleetRequestsInput(v *CancelSpotFleetRequestsInput) err
 	if v.SpotFleetRequestIds == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("SpotFleetRequestIds"))
 	}
+	if v.TerminateInstances == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("TerminateInstances"))
+	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
 	} else {
@@ -8210,6 +8385,9 @@ func validateOpCreateCapacityReservationInput(v *CreateCapacityReservationInput)
 	if len(v.InstancePlatform) == 0 {
 		invalidParams.Add(smithy.NewErrParamRequired("InstancePlatform"))
 	}
+	if v.InstanceCount == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("InstanceCount"))
+	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
 	} else {
@@ -8282,6 +8460,9 @@ func validateOpCreateCustomerGatewayInput(v *CreateCustomerGatewayInput) error {
 		return nil
 	}
 	invalidParams := smithy.InvalidParamsError{Context: "CreateCustomerGatewayInput"}
+	if v.BgpAsn == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("BgpAsn"))
+	}
 	if len(v.Type) == 0 {
 		invalidParams.Add(smithy.NewErrParamRequired("Type"))
 	}
@@ -8542,6 +8723,9 @@ func validateOpCreateManagedPrefixListInput(v *CreateManagedPrefixListInput) err
 			invalidParams.AddNested("Entries", err.(smithy.InvalidParamsError))
 		}
 	}
+	if v.MaxEntries == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("MaxEntries"))
+	}
 	if v.AddressFamily == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("AddressFamily"))
 	}
@@ -8557,11 +8741,11 @@ func validateOpCreateNatGatewayInput(v *CreateNatGatewayInput) error {
 		return nil
 	}
 	invalidParams := smithy.InvalidParamsError{Context: "CreateNatGatewayInput"}
-	if v.AllocationId == nil {
-		invalidParams.Add(smithy.NewErrParamRequired("AllocationId"))
-	}
 	if v.SubnetId == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("SubnetId"))
+	}
+	if v.AllocationId == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("AllocationId"))
 	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
@@ -8575,6 +8759,9 @@ func validateOpCreateNetworkAclEntryInput(v *CreateNetworkAclEntryInput) error {
 		return nil
 	}
 	invalidParams := smithy.InvalidParamsError{Context: "CreateNetworkAclEntryInput"}
+	if v.Egress == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("Egress"))
+	}
 	if v.NetworkAclId == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("NetworkAclId"))
 	}
@@ -8583,6 +8770,9 @@ func validateOpCreateNetworkAclEntryInput(v *CreateNetworkAclEntryInput) error {
 	}
 	if len(v.RuleAction) == 0 {
 		invalidParams.Add(smithy.NewErrParamRequired("RuleAction"))
+	}
+	if v.RuleNumber == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("RuleNumber"))
 	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
@@ -8663,6 +8853,21 @@ func validateOpCreateNetworkInterfacePermissionInput(v *CreateNetworkInterfacePe
 	}
 }
 
+func validateOpCreateReplaceRootVolumeTaskInput(v *CreateReplaceRootVolumeTaskInput) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "CreateReplaceRootVolumeTaskInput"}
+	if v.InstanceId == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("InstanceId"))
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
 func validateOpCreateReservedInstancesListingInput(v *CreateReservedInstancesListingInput) error {
 	if v == nil {
 		return nil
@@ -8671,11 +8876,32 @@ func validateOpCreateReservedInstancesListingInput(v *CreateReservedInstancesLis
 	if v.ClientToken == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("ClientToken"))
 	}
+	if v.InstanceCount == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("InstanceCount"))
+	}
 	if v.PriceSchedules == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("PriceSchedules"))
 	}
 	if v.ReservedInstancesId == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("ReservedInstancesId"))
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
+func validateOpCreateRestoreImageTaskInput(v *CreateRestoreImageTaskInput) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "CreateRestoreImageTaskInput"}
+	if v.Bucket == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("Bucket"))
+	}
+	if v.ObjectKey == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("ObjectKey"))
 	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
@@ -8777,6 +9003,24 @@ func validateOpCreateSpotDatafeedSubscriptionInput(v *CreateSpotDatafeedSubscrip
 	}
 }
 
+func validateOpCreateStoreImageTaskInput(v *CreateStoreImageTaskInput) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "CreateStoreImageTaskInput"}
+	if v.ImageId == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("ImageId"))
+	}
+	if v.Bucket == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("Bucket"))
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
 func validateOpCreateSubnetInput(v *CreateSubnetInput) error {
 	if v == nil {
 		return nil
@@ -8824,6 +9068,9 @@ func validateOpCreateTrafficMirrorFilterRuleInput(v *CreateTrafficMirrorFilterRu
 	if len(v.TrafficDirection) == 0 {
 		invalidParams.Add(smithy.NewErrParamRequired("TrafficDirection"))
 	}
+	if v.RuleNumber == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("RuleNumber"))
+	}
 	if len(v.RuleAction) == 0 {
 		invalidParams.Add(smithy.NewErrParamRequired("RuleAction"))
 	}
@@ -8853,6 +9100,9 @@ func validateOpCreateTrafficMirrorSessionInput(v *CreateTrafficMirrorSessionInpu
 	}
 	if v.TrafficMirrorFilterId == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("TrafficMirrorFilterId"))
+	}
+	if v.SessionNumber == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("SessionNumber"))
 	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
@@ -9233,6 +9483,9 @@ func validateOpDeleteFleetsInput(v *DeleteFleetsInput) error {
 	if v.FleetIds == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("FleetIds"))
 	}
+	if v.TerminateInstances == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("TerminateInstances"))
+	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
 	} else {
@@ -9368,8 +9621,14 @@ func validateOpDeleteNetworkAclEntryInput(v *DeleteNetworkAclEntryInput) error {
 		return nil
 	}
 	invalidParams := smithy.InvalidParamsError{Context: "DeleteNetworkAclEntryInput"}
+	if v.Egress == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("Egress"))
+	}
 	if v.NetworkAclId == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("NetworkAclId"))
+	}
+	if v.RuleNumber == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("RuleNumber"))
 	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
@@ -9932,6 +10191,9 @@ func validateOpDescribeByoipCidrsInput(v *DescribeByoipCidrsInput) error {
 		return nil
 	}
 	invalidParams := smithy.InvalidParamsError{Context: "DescribeByoipCidrsInput"}
+	if v.MaxResults == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("MaxResults"))
+	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
 	} else {
@@ -10766,6 +11028,31 @@ func validateOpGetDefaultCreditSpecificationInput(v *GetDefaultCreditSpecificati
 	}
 }
 
+func validateOpGetFlowLogsIntegrationTemplateInput(v *GetFlowLogsIntegrationTemplateInput) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "GetFlowLogsIntegrationTemplateInput"}
+	if v.FlowLogId == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("FlowLogId"))
+	}
+	if v.ConfigDeliveryS3DestinationArn == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("ConfigDeliveryS3DestinationArn"))
+	}
+	if v.IntegrateServices == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("IntegrateServices"))
+	} else if v.IntegrateServices != nil {
+		if err := validateIntegrateServices(v.IntegrateServices); err != nil {
+			invalidParams.AddNested("IntegrateServices", err.(smithy.InvalidParamsError))
+		}
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
 func validateOpGetGroupsForCapacityReservationInput(v *GetGroupsForCapacityReservationInput) error {
 	if v == nil {
 		return nil
@@ -11181,6 +11468,9 @@ func validateOpModifyIdentityIdFormatInput(v *ModifyIdentityIdFormatInput) error
 	if v.Resource == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("Resource"))
 	}
+	if v.UseLongIds == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("UseLongIds"))
+	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
 	} else {
@@ -11195,6 +11485,9 @@ func validateOpModifyIdFormatInput(v *ModifyIdFormatInput) error {
 	invalidParams := smithy.InvalidParamsError{Context: "ModifyIdFormatInput"}
 	if v.Resource == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("Resource"))
+	}
+	if v.UseLongIds == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("UseLongIds"))
 	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
@@ -11793,6 +12086,9 @@ func validateOpPurchaseReservedInstancesOfferingInput(v *PurchaseReservedInstanc
 		return nil
 	}
 	invalidParams := smithy.InvalidParamsError{Context: "PurchaseReservedInstancesOfferingInput"}
+	if v.InstanceCount == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("InstanceCount"))
+	}
 	if v.ReservedInstancesOfferingId == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("ReservedInstancesOfferingId"))
 	}
@@ -11971,6 +12267,9 @@ func validateOpReplaceNetworkAclEntryInput(v *ReplaceNetworkAclEntryInput) error
 		return nil
 	}
 	invalidParams := smithy.InvalidParamsError{Context: "ReplaceNetworkAclEntryInput"}
+	if v.Egress == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("Egress"))
+	}
 	if v.NetworkAclId == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("NetworkAclId"))
 	}
@@ -11979,6 +12278,9 @@ func validateOpReplaceNetworkAclEntryInput(v *ReplaceNetworkAclEntryInput) error
 	}
 	if len(v.RuleAction) == 0 {
 		invalidParams.Add(smithy.NewErrParamRequired("RuleAction"))
+	}
+	if v.RuleNumber == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("RuleNumber"))
 	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
@@ -12220,6 +12522,12 @@ func validateOpRestoreManagedPrefixListVersionInput(v *RestoreManagedPrefixListV
 	if v.PrefixListId == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("PrefixListId"))
 	}
+	if v.PreviousVersion == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("PreviousVersion"))
+	}
+	if v.CurrentVersion == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("CurrentVersion"))
+	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
 	} else {
@@ -12265,6 +12573,12 @@ func validateOpRunInstancesInput(v *RunInstancesInput) error {
 		return nil
 	}
 	invalidParams := smithy.InvalidParamsError{Context: "RunInstancesInput"}
+	if v.MaxCount == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("MaxCount"))
+	}
+	if v.MinCount == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("MinCount"))
+	}
 	if v.Monitoring != nil {
 		if err := validateRunInstancesMonitoringEnabled(v.Monitoring); err != nil {
 			invalidParams.AddNested("Monitoring", err.(smithy.InvalidParamsError))
@@ -12463,11 +12777,11 @@ func validateOpUnassignIpv6AddressesInput(v *UnassignIpv6AddressesInput) error {
 		return nil
 	}
 	invalidParams := smithy.InvalidParamsError{Context: "UnassignIpv6AddressesInput"}
-	if v.Ipv6Addresses == nil {
-		invalidParams.Add(smithy.NewErrParamRequired("Ipv6Addresses"))
-	}
 	if v.NetworkInterfaceId == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("NetworkInterfaceId"))
+	}
+	if v.Ipv6Addresses == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("Ipv6Addresses"))
 	}
 	if invalidParams.Len() > 0 {
 		return invalidParams

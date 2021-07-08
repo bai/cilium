@@ -33,6 +33,7 @@ import (
 	"github.com/cilium/cilium/pkg/ipam/allocator"
 	ipamOption "github.com/cilium/cilium/pkg/ipam/option"
 	"github.com/cilium/cilium/pkg/k8s"
+	"github.com/cilium/cilium/pkg/k8s/apis/cilium.io/client"
 	clientset "github.com/cilium/cilium/pkg/k8s/client/clientset/versioned"
 	k8sversion "github.com/cilium/cilium/pkg/k8s/version"
 	"github.com/cilium/cilium/pkg/kvstore"
@@ -90,8 +91,6 @@ var (
 		},
 	}
 
-	// Deprecated: remove in 1.9
-	apiServerPort  uint16
 	shutdownSignal = make(chan struct{})
 
 	ciliumK8sClient clientset.Interface
@@ -132,7 +131,9 @@ func initEnv() {
 	logging.DefaultLogger.Hooks.Add(metrics.NewLoggingHook(components.CiliumOperatortName))
 
 	// Logging should always be bootstrapped first. Do not add any code above this!
-	logging.SetupLogging(option.Config.LogDriver, logging.LogOptions(option.Config.LogOpt), binaryName, option.Config.Debug)
+	if err := logging.SetupLogging(option.Config.LogDriver, logging.LogOptions(option.Config.LogOpt), binaryName, option.Config.Debug); err != nil {
+		log.Fatal(err)
+	}
 
 	option.LogRegisteredOptions(log)
 	// Enable fallback to direct API probing to check for support of Leases in
@@ -202,7 +203,7 @@ func kvstoreEnabled() bool {
 
 func getAPIServerAddr() []string {
 	if operatorOption.Config.OperatorAPIServeAddr == "" {
-		return []string{fmt.Sprintf("127.0.0.1:%d", apiServerPort), fmt.Sprintf("[::1]:%d", apiServerPort)}
+		return []string{"127.0.0.1:0", "[::1]:0"}
 	}
 	return []string{operatorOption.Config.OperatorAPIServeAddr}
 }
@@ -258,7 +259,7 @@ func runOperator() {
 	}
 
 	if operatorOption.Config.PProf {
-		pprof.Enable()
+		pprof.Enable(operatorOption.Config.PProfPort)
 	}
 
 	initK8s(k8sInitDone)
@@ -271,8 +272,12 @@ func runOperator() {
 
 	// Register the CRDs after validating that we are running on a supported
 	// version of K8s.
-	if err := k8s.RegisterCRDs(); err != nil {
-		log.WithError(err).Fatal("Unable to register CRDs")
+	if !operatorOption.Config.SkipCRDCreation {
+		if err := client.RegisterCRDs(); err != nil {
+			log.WithError(err).Fatal("Unable to register CRDs")
+		}
+	} else {
+		log.Info("Skipping creation of CRDs")
 	}
 
 	// We only support Operator in HA mode for Kubernetes Versions having support for
@@ -367,7 +372,7 @@ func onOperatorStartLeading(ctx context.Context) {
 	log.WithField(logfields.Mode, option.Config.IPAM).Info("Initializing IPAM")
 
 	switch ipamMode := option.Config.IPAM; ipamMode {
-	case ipamOption.IPAMAzure, ipamOption.IPAMENI, ipamOption.IPAMClusterPool:
+	case ipamOption.IPAMAzure, ipamOption.IPAMENI, ipamOption.IPAMClusterPool, ipamOption.IPAMAlibabaCloud:
 		alloc, providerBuiltin := allocatorProviders[ipamMode]
 		if !providerBuiltin {
 			log.Fatalf("%s allocator is not supported by this version of %s", ipamMode, binaryName)
@@ -405,6 +410,11 @@ func onOperatorStartLeading(ctx context.Context) {
 	default:
 		startSynchronizingCiliumNodes(NOPNodeManager)
 		nodeManager = &NOPNodeManager
+	}
+
+	if operatorOption.Config.BGPAnnounceLBIP {
+		log.Info("Starting LB IP allocator")
+		operatorWatchers.StartLBIPAllocator(option.Config)
 	}
 
 	if kvstoreEnabled() {

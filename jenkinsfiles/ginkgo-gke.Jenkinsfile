@@ -20,18 +20,6 @@ pipeline {
                 returnStdout: true,
                 script: 'if [ "${RunQuarantined}" = "" ]; then echo -n "false"; else echo -n "${RunQuarantined}"; fi'
             )}"""
-        RACE="""${sh(
-                returnStdout: true,
-                script: 'if [ "${run_with_race_detection}" = "" ]; then echo -n ""; else echo -n "1"; fi'
-            )}"""
-        LOCKDEBUG="""${sh(
-                returnStdout: true,
-                script: 'if [ "${run_with_race_detection}" = "" ]; then echo -n ""; else echo -n "1"; fi'
-            )}"""
-        BASE_IMAGE="""${sh(
-                returnStdout: true,
-                script: 'if [ "${run_with_race_detection}" = "" ]; then echo -n "scratch"; else echo -n "quay.io/cilium/cilium-runtime:7f84e5f2c9027e75b271a460d83c086f29127d3a@sha256:a1d73d2840b4b075ade33bd8f968ca6db3d9bca9f3ed14f168d14526b3208cc0"; fi'
-            )}"""
     }
 
     options {
@@ -81,8 +69,11 @@ pipeline {
                     } else {
                         env.DOCKER_TAG = env.GIT_COMMIT
                     }
-                    if (env.RACE?.trim()) {
+                    if (env.run_with_race_detection?.trim()) {
                         env.DOCKER_TAG = env.DOCKER_TAG + "-race"
+                        env.RACE = 1
+                        env.LOCKDEBUG = 1
+                        env.BASE_IMAGE = "quay.io/cilium/cilium-runtime:28b5a8658b596d12d80b0e7dad3efc2e77ec2d65@sha256:fbf8eee141101fade247dbe94cf84ca3bdcd92b96108996c50859ab7edd607d0"
                     }
                 }
             }
@@ -97,7 +88,7 @@ pipeline {
                         retry(25) {
                             sleep(time: 60)
                             sh 'curl --silent -f -lSL "https://quay.io/api/v1/repository/cilium/cilium-ci/tag/${DOCKER_TAG}/images"'
-                            sh 'curl --silent -f -lSL "https://quay.io/api/v1/repository/cilium/operator-ci/tag/${DOCKER_TAG}/images"'
+                            sh 'curl --silent -f -lSL "https://quay.io/api/v1/repository/cilium/operator-generic-ci/tag/${DOCKER_TAG}/images"'
                             sh 'curl --silent -f -lSL "https://quay.io/api/v1/repository/cilium/hubble-relay-ci/tag/${DOCKER_TAG}/images"'
                         }
                     }
@@ -157,6 +148,10 @@ pipeline {
                         script: 'echo ${ghprbCommentBody} | sed -r "s/([^ ]* |^[^ ]*$)//" | sed "s/^$/K8s*/" | tr -d \'\n\''
                         )}"""
                 KERNEL="419"
+                NATIVE_CIDR= """${sh(
+                        returnStdout: true,
+                        script: 'cat ${TESTDIR}/gke/cluster-cidr | tr -d \'\n\''
+                        )}"""
             }
             steps {
                 dir("${TESTDIR}"){

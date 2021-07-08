@@ -1,4 +1,4 @@
-// Copyright 2016-2020 Authors of Cilium
+// Copyright 2016-2021 Authors of Cilium
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -125,7 +125,8 @@ func (d *Daemon) getK8sStatus() *models.K8sStatus {
 
 func (d *Daemon) getMasqueradingStatus() *models.Masquerading {
 	s := &models.Masquerading{
-		Enabled: &models.MasqueradingEnabled{
+		Enabled: option.Config.EnableIPv4Masquerade || option.Config.EnableIPv6Masquerade,
+		EnabledProtocols: &models.MasqueradingEnabledProtocols{
 			IPV4: option.Config.EnableIPv4Masquerade,
 			IPV6: option.Config.EnableIPv6Masquerade,
 		},
@@ -136,6 +137,9 @@ func (d *Daemon) getMasqueradingStatus() *models.Masquerading {
 	}
 
 	if option.Config.EnableIPv4 {
+		// SnatExclusionCidr is the legacy field, continue to provide
+		// it for the time being
+		s.SnatExclusionCidr = datapath.RemoteSNATDstAddrExclusionCIDRv4().String()
 		s.SnatExclusionCidrV4 = datapath.RemoteSNATDstAddrExclusionCIDRv4().String()
 	}
 
@@ -201,11 +205,13 @@ func (d *Daemon) getKubeProxyReplacementStatus() *models.KubeProxyReplacement {
 		mode = models.KubeProxyReplacementModeDisabled
 	}
 
-	devices := make([]*models.KubeProxyReplacementDevicesItems0, len(option.Config.Devices))
+	devicesLegacy := make([]string, len(option.Config.Devices))
+	devices := make([]*models.KubeProxyReplacementDeviceListItems0, len(option.Config.Devices))
 	v4Addrs := node.GetNodePortIPv4AddrsWithDevices()
 	v6Addrs := node.GetNodePortIPv6AddrsWithDevices()
 	for i, iface := range option.Config.Devices {
-		info := &models.KubeProxyReplacementDevicesItems0{
+		devicesLegacy[i] = iface
+		info := &models.KubeProxyReplacementDeviceListItems0{
 			Name: iface,
 			IP:   make([]string, 0),
 		}
@@ -267,7 +273,8 @@ func (d *Daemon) getKubeProxyReplacementStatus() *models.KubeProxyReplacement {
 
 	return &models.KubeProxyReplacement{
 		Mode:                mode,
-		Devices:             devices,
+		Devices:             devicesLegacy,
+		DeviceList:          devices,
 		DirectRoutingDevice: option.Config.DirectRoutingDevice,
 		Features:            features,
 	}
@@ -489,6 +496,11 @@ func (c *clusterNodesClient) NodeNeighborRefresh(ctx context.Context, node nodeT
 	return
 }
 
+func (c *clusterNodesClient) NodeCleanNeighbors() {
+	// no-op
+	return
+}
+
 func (h *getNodes) cleanupClients() {
 	past := time.Now().Add(-clientGCTimeout)
 	for k, v := range h.clients {
@@ -610,9 +622,9 @@ func (d *Daemon) getStatus(brief bool) models.StatusResponse {
 
 	sr.Stale = stale
 
-	//CiliumVersion definition
+	// CiliumVersion definition
 	ver := version.GetCiliumVersion()
-	ciliumVer := fmt.Sprintf("%s (v.%s-r.%s)", ver.Version, ver.Version, ver.Revision)
+	ciliumVer := fmt.Sprintf("%s (v%s-%s)", ver.Version, ver.Version, ver.Revision)
 
 	switch {
 	case len(sr.Stale) > 0:
@@ -625,6 +637,15 @@ func (d *Daemon) getStatus(brief bool) models.StatusResponse {
 		msg := "Kvstore service is not ready"
 		sr.Cilium = &models.Status{
 			State: d.statusResponse.Kvstore.State,
+			Msg:   fmt.Sprintf("%s    %s", ciliumVer, msg),
+		}
+	case d.statusResponse.ContainerRuntime != nil && d.statusResponse.ContainerRuntime.State != models.StatusStateOk:
+		msg := "Container runtime is not ready"
+		if d.statusResponse.ContainerRuntime.State == models.StatusStateDisabled {
+			msg = "Container runtime is disabled"
+		}
+		sr.Cilium = &models.Status{
+			State: d.statusResponse.ContainerRuntime.State,
 			Msg:   fmt.Sprintf("%s    %s", ciliumVer, msg),
 		}
 	case k8s.IsEnabled() && d.statusResponse.Kubernetes != nil && d.statusResponse.Kubernetes.State != models.StatusStateOk:
@@ -900,6 +921,42 @@ func (d *Daemon) startStatusCollector() {
 				if status.Err == nil {
 					if s, ok := status.Data.(*models.HubbleStatus); ok {
 						d.statusResponse.Hubble = s
+					}
+				}
+			},
+		},
+		{
+			Name: "encryption",
+			Probe: func(ctx context.Context) (interface{}, error) {
+				switch {
+				case option.Config.EnableIPSec:
+					return &models.EncryptionStatus{
+						Mode: models.EncryptionStatusModeIPsec,
+					}, nil
+				case option.Config.EnableWireguard:
+					var msg string
+					status, err := d.datapath.WireguardAgent().Status(false)
+					if err != nil {
+						msg = err.Error()
+					}
+					return &models.EncryptionStatus{
+						Mode:      models.EncryptionStatusModeWireguard,
+						Msg:       msg,
+						Wireguard: status,
+					}, nil
+				default:
+					return &models.EncryptionStatus{
+						Mode: models.EncryptionStatusModeDisabled,
+					}, nil
+				}
+			},
+			OnStatusUpdate: func(status status.Status) {
+				d.statusCollectMutex.Lock()
+				defer d.statusCollectMutex.Unlock()
+
+				if status.Err == nil {
+					if s, ok := status.Data.(*models.EncryptionStatus); ok {
+						d.statusResponse.Encryption = s
 					}
 				}
 			},

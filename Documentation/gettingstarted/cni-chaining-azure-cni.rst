@@ -4,6 +4,8 @@
     Please use the official rendered version released here:
     https://docs.cilium.io
 
+.. _chaining_azure:
+
 *********
 Azure CNI
 *********
@@ -11,9 +13,11 @@ Azure CNI
 .. note::
 
    This is not the best option to run Cilium on AKS or Azure. Please refer to
-   :ref:`k8s_install_aks` for the best guide to run Cilium in Azure Cloud.
+   :ref:`k8s_install_quick` for the best guide to run Cilium in Azure Cloud.
    Follow this guide if you specifically want to run Cilium in combination with
    the Azure CNI in a chaining configuration.
+
+.. include:: cni-chaining-limitations.rst
 
 This guide explains how to set up Cilium in combination with Azure CNI in a
 chaining configuration. In this hybrid mode, the Azure CNI plugin is
@@ -31,13 +35,13 @@ desired CNI chaining configuration. This ConfigMap will be installed as the CNI
 configuration file on all nodes and defines the chaining configuration. In the
 example below, the Azure CNI, portmap, and Cilium are chained together.
 
-.. code:: yaml
+.. code-block:: yaml
 
     apiVersion: v1
     kind: ConfigMap
     metadata:
       name: cni-configuration
-      namespace: cilium
+      namespace: kube-system
     data:
       cni-config: |-
         {
@@ -63,16 +67,9 @@ example below, the Azure CNI, portmap, and Cilium are chained together.
           ]
         }
 
-Create the cilium namespace:
-
-.. code:: bash
-
-   kubectl create namespace cilium
-
-
 Deploy the `ConfigMap`:
 
-.. code:: bash
+.. code-block:: shell-session
 
    kubectl apply -f chaining.yaml
 
@@ -87,7 +84,7 @@ Deploy Cilium release via Helm:
 .. parsed-literal::
 
    helm install cilium |CHART_RELEASE| \\
-     --namespace cilium \\
+     --namespace kube-system \\
      --set cni.chainingMode=generic-veth \\
      --set cni.customConf=true \\
      --set nodeinit.enabled=true \\
@@ -100,32 +97,6 @@ existing Azure CNI plugin to run in 'transparent' mode.
 
 .. include:: k8s-install-restart-pods.rst
 
-Validate the Installation
-=========================
+.. include:: k8s-install-validate.rst
 
-You can monitor as Cilium and all required components are being installed:
-
-.. code-block:: shell-session
-
-   $ kubectl -n cilium get pods --watch
-   cilium-2twr9                      0/1     Init:0/2            0          17s
-   cilium-fkhjv                      0/1     Init:0/2            0          17s
-   cilium-node-init-bhr5l            1/1     Running             0          17s
-   cilium-node-init-l77v9            1/1     Running             0          17s
-   cilium-operator-f8bd5cd96-qdspd   0/1     ContainerCreating   0          17s
-   cilium-operator-f8bd5cd96-tvdn6   0/1     ContainerCreating   0          17s
-
-It may take a couple of minutes for all components to come up:
-
-.. code-block:: shell-session
-
-   cilium-operator-f8bd5cd96-tvdn6   1/1     Running             0          25s
-   cilium-operator-f8bd5cd96-qdspd   1/1     Running             0          26s
-   cilium-fkhjv                      1/1     Running             0          60s
-   cilium-2twr9                      1/1     Running             0          61s
-
-.. include:: k8s-install-connectivity-test.rst
-
-.. include:: namespace-cilium.rst
-.. include:: hubble-enable.rst
-
+.. include:: next-steps.rst

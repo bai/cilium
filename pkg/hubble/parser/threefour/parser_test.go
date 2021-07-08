@@ -1,5 +1,5 @@
 // Copyright 2019 Authors of Hubble
-// Copyright 2020 Authors of Cilium
+// Copyright 2020-2021 Authors of Cilium
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"testing"
 
@@ -33,6 +33,8 @@ import (
 	"github.com/cilium/cilium/pkg/hubble/testutils"
 	"github.com/cilium/cilium/pkg/identity"
 	"github.com/cilium/cilium/pkg/ipcache"
+	slim_corev1 "github.com/cilium/cilium/pkg/k8s/slim/k8s/api/core/v1"
+	slim_metav1 "github.com/cilium/cilium/pkg/k8s/slim/k8s/apis/meta/v1"
 	"github.com/cilium/cilium/pkg/labels"
 	"github.com/cilium/cilium/pkg/monitor"
 	"github.com/cilium/cilium/pkg/monitor/api"
@@ -51,7 +53,7 @@ var log *logrus.Logger
 
 func init() {
 	log = logrus.New()
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 }
 
 func TestL34Decode(t *testing.T) {
@@ -79,6 +81,16 @@ func TestL34Decode(t *testing.T) {
 					Identity:     5678,
 					PodName:      "pod-10.16.236.178",
 					PodNamespace: "default",
+					Pod: &slim_corev1.Pod{
+						ObjectMeta: slim_metav1.ObjectMeta{
+							OwnerReferences: []slim_metav1.OwnerReference{
+								{
+									Kind: "ReplicaSet",
+									Name: "pod",
+								},
+							},
+						},
+					},
 				}, true
 			}
 			return nil, false
@@ -986,7 +998,7 @@ func TestDebugCapture(t *testing.T) {
 	dbg = monitor.DebugCapture{
 		Type:    api.MessageTypeCapture,
 		SubType: monitor.DbgCaptureProxyPost,
-		Arg1:    byteorder.HostToNetwork(uint32(1234)).(uint32),
+		Arg1:    byteorder.HostToNetwork32(1234),
 	}
 	data, err = testutils.CreateL3L4Payload(dbg)
 	require.NoError(t, err)

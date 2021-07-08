@@ -102,12 +102,8 @@ spec:
 {{- else }}
       - args:
         - --config-dir=/tmp/cilium/config-map
-{{- range $key, $value := .Values.extraArgs }}
-{{- if $value }}
-        - --{{ $key }}={{ $value }}
-{{- else }}
-        - --{{ $key }}
-{{- end }}
+{{- with .Values.extraArgs }}
+        {{- toYaml . | trim | nindent 8 }}
 {{- end }}
         command:
         - cilium-agent
@@ -125,8 +121,8 @@ spec:
             httpHeaders:
             - name: "brief"
               value: "true"
-          failureThreshold: 24
-          periodSeconds: 2
+          failureThreshold: {{ .Values.startupProbe.failureThreshold }}
+          periodSeconds: {{ .Values.startupProbe.periodSeconds }}
           successThreshold: 1
 {{- end }}
         livenessProbe:
@@ -150,7 +146,7 @@ spec:
             - name: "brief"
               value: "true"
 {{- end }}
-          failureThreshold: 10
+          failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
 {{- if semverCompare "<1.20-0" $k8sVersion }}
           # The initial delay for the liveness probe is intentionally large to
           # avoid an endless kill & restart cycle if in the event that the initial
@@ -159,7 +155,7 @@ spec:
           # of this field.
           initialDelaySeconds: 120
 {{- end }}
-          periodSeconds: 30
+          periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
           successThreshold: 1
           timeoutSeconds: 5
         readinessProbe:
@@ -183,11 +179,11 @@ spec:
             - name: "brief"
               value: "true"
 {{- end }}
-          failureThreshold: 3
+          failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
 {{- if semverCompare "<1.20-0" $k8sVersion }}
           initialDelaySeconds: 5
 {{- end }}
-          periodSeconds: 30
+          periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
           successThreshold: 1
           timeoutSeconds: 5
 {{- end }}
@@ -202,18 +198,6 @@ spec:
             fieldRef:
               apiVersion: v1
               fieldPath: metadata.namespace
-        - name: CILIUM_FLANNEL_MASTER_DEVICE
-          valueFrom:
-            configMapKeyRef:
-              key: flannel-master-device
-              name: cilium-config
-              optional: true
-        - name: CILIUM_FLANNEL_UNINSTALL_ON_EXIT
-          valueFrom:
-            configMapKeyRef:
-              key: flannel-uninstall-on-exit
-              name: cilium-config
-              optional: true
         - name: CILIUM_CLUSTERMESH_CONFIG
           value: /var/lib/cilium/clustermesh/
         - name: CILIUM_CNI_CHAINING_MODE
@@ -239,7 +223,7 @@ spec:
 {{- with .Values.extraEnv }}
 {{ toYaml . | trim | indent 8 }}
 {{- end }}
-        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}{{ if .Values.image.useDigest }}@{{ .Values.image.digest }}{{ end }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
 {{- if .Values.cni.install }}
         lifecycle:
@@ -292,6 +276,11 @@ spec:
         - mountPath: /sys/fs/bpf
           name: bpf-maps
 {{- end }}
+{{- if not (contains "/run/cilium/cgroupv2" .Values.cgroup.hostRoot) }}
+        # Check for duplicate mounts before mounting
+        - mountPath: {{ .Values.cgroup.hostRoot }}
+          name: cilium-cgroup
+{{- end}}
         - mountPath: /var/run/cilium
           name: cilium-run
         - mountPath: /host/opt/cni/bin
@@ -330,13 +319,22 @@ spec:
           readOnly: true
         - mountPath: /run/xtables.lock
           name: xtables-lock
-{{- if .Values.encryption.enabled }}
+{{- if and ( .Values.encryption.enabled ) ( eq .Values.encryption.type "ipsec" ) }}
+  {{- if .Values.encryption.ipsec.mountPath }}
+        - mountPath: {{ .Values.encryption.ipsec.mountPath }}
+  {{- else }}
         - mountPath: {{ .Values.encryption.mountPath }}
+  {{- end }}
           name: cilium-ipsec-secrets
 {{- end }}
 {{- if .Values.kubeConfigPath }}
         - mountPath: {{ .Values.kubeConfigPath }}
           name: kube-config
+          readOnly: true
+{{- end }}
+{{- if .Values.bgp.enabled }}
+        - mountPath: /var/lib/cilium/bgp
+          name: bgp-config-path
           readOnly: true
 {{- end }}
 {{- if and (.Values.hubble.enabled) (hasKey .Values.hubble "listenAddress") (.Values.hubble.tls.enabled) }}
@@ -360,7 +358,7 @@ spec:
 {{- range $type := .Values.monitor.eventTypes }}
         - --type={{ $type }}
 {{- end }}
-        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}{{ if .Values.image.useDigest }}@{{ .Values.image.digest }}{{ end }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         volumeMounts:
         - mountPath: /var/run/cilium
@@ -377,10 +375,38 @@ spec:
 {{- end }}
       hostNetwork: true
       initContainers:
+{{- if .Values.cgroup.autoMount.enabled }}
+      # Required to mount cgroup2 filesystem on the underlying Kubernetes node.
+      # We use nsenter command with host's cgroup and mount namespaces enabled.
+      - name: mount-cgroup
+        env:
+          - name: CGROUP_ROOT
+            value: {{ .Values.cgroup.hostRoot }}
+          - name: BIN_PATH
+            value: {{ .Values.cni.binPath }}
+        command:
+          - sh
+          - -c
+          # The statically linked Go program binary is invoked to avoid any
+          # dependency on utilities like sh and mount that can be missing on certain
+          # distros installed on the underlying host. Copy the binary to the
+          # same directory where we install cilium cni plugin so that exec permissions
+          # are available.
+          - 'cp /usr/bin/cilium-mount /hostbin/cilium-mount && nsenter --cgroup=/hostproc/1/ns/cgroup --mount=/hostproc/1/ns/mnt "${BIN_PATH}/cilium-mount" $CGROUP_ROOT; rm /hostbin/cilium-mount'
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}{{ if .Values.image.useDigest }}@{{ .Values.image.digest }}{{ end }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        volumeMounts:
+          - mountPath: /hostproc
+            name: hostproc
+          - mountPath: /hostbin
+            name: cni-path
+        securityContext:
+          privileged: true
+{{- end }}
 {{- if and .Values.nodeinit.enabled (not (eq .Values.nodeinit.bootstrapFile "")) }}
       - name: wait-for-node-init
         command: ['sh', '-c', 'until stat {{ .Values.nodeinit.bootstrapFile }} > /dev/null 2>&1; do echo "Waiting on node-init to run..."; sleep 1; done']
-        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}{{ if .Values.image.useDigest }}@{{ .Values.image.digest }}{{ end }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         volumeMounts:
         - mountPath: {{ .Values.nodeinit.bootstrapFile }}
@@ -418,7 +444,7 @@ spec:
 {{- if .Values.extraEnv }}
 {{ toYaml .Values.extraEnv | indent 8 }}
 {{- end }}
-        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}{{ if .Values.image.useDigest }}@{{ .Values.image.digest }}{{ end }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         name: clean-cilium-state
         securityContext:
@@ -432,6 +458,17 @@ spec:
         - mountPath: /sys/fs/bpf
           name: bpf-maps
 {{- /* Required for wait-bpf-mount to work */}}
+          mountPropagation: HostToContainer
+{{- end }}
+{{- if .Values.cgroup.autoMount.enabled }}
+          # Required to mount cgroup filesystem from the host to cilium agent pod
+        - mountPath: {{ .Values.cgroup.hostRoot }}
+          name: cilium-cgroup
+          mountPropagation: HostToContainer
+{{-  else }}
+          # Required to mount cgroup filesystem from the host to cilium agent pod
+        - mountPath: {{ .Values.cgroup.hostRoot }}
+          name: cilium-cgroup
           mountPropagation: HostToContainer
 {{- end }}
         - mountPath: /var/run/cilium
@@ -465,6 +502,18 @@ spec:
           type: DirectoryOrCreate
         name: bpf-maps
 {{- end }}
+{{- if .Values.cgroup.autoMount.enabled }}
+      # To mount cgroup2 filesystem on the host
+      - hostPath:
+          path: /proc
+          type: Directory
+        name: hostproc
+{{- end }}
+      # To keep state between restarts / upgrades for cgroup2 filesystem
+      - hostPath:
+          path: {{ .Values.cgroup.hostRoot}}
+          type: DirectoryOrCreate
+        name: cilium-cgroup
       # To install cilium cni plugin in the host
       - hostPath:
           path:  {{ .Values.cni.binPath }}
@@ -541,15 +590,24 @@ spec:
             path: ip-masq-agent
         name: ip-masq-agent
 {{- end }}
-{{- if .Values.encryption.enabled }}
+{{- if and ( .Values.encryption.enabled ) ( eq .Values.encryption.type "ipsec" ) }}
       - name: cilium-ipsec-secrets
         secret:
+  {{- if .Values.encryption.ipsec.secretName }}
+          secretName: {{ .Values.encryption.ipsec.secretName }}
+  {{- else }}
           secretName: {{ .Values.encryption.secretName }}
+  {{- end }}
 {{- end }}
 {{- if .Values.cni.configMap }}
       - name: cni-configuration
         configMap:
           name: {{ .Values.cni.configMap }}
+{{- end }}
+{{- if .Values.bgp.enabled }}
+      - configMap:
+          name: bgp-config
+        name: bgp-config-path
 {{- end }}
 {{- if and .Values.hubble.enabled .Values.hubble.tls.enabled (hasKey .Values.hubble "listenAddress") }}
       - name: hubble-tls
@@ -558,16 +616,12 @@ spec:
           - secret:
               name: hubble-server-certs
               items:
+                - key: ca.crt
+                  path: client-ca.crt
                 - key: tls.crt
                   path: server.crt
                 - key: tls.key
                   path: server.key
-              optional: true
-          - configMap:
-              name: hubble-ca-cert
-              items:
-                - key: ca.crt
-                  path: client-ca.crt
               optional: true
 {{- end }}
 {{- end }}

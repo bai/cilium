@@ -113,13 +113,13 @@ you can delete the cilium-preflight and proceed with the upgrade.
 .. tabs::
   .. group-tab:: kubectl
 
-    .. parsed-literal::
+    .. code-block:: shell-session
 
       kubectl delete -f cilium-preflight.yaml
 
   .. group-tab:: Helm
 
-    .. parsed-literal::
+    .. code-block:: shell-session
 
       helm delete cilium-preflight --namespace=kube-system
 
@@ -160,6 +160,7 @@ version which was installed in this cluster. Valid options are:
 
 * ``1.7`` if the initial install was Cilium 1.7.x or earlier.
 * ``1.8`` if the initial install was Cilium 1.8.x.
+* ``1.9`` if the initial install was Cilium 1.9.x.
 
 .. tabs::
   .. group-tab:: kubectl
@@ -192,9 +193,7 @@ version which was installed in this cluster. Valid options are:
    `1.9_helm_options` to determine the 1.9 equivalent options for options you
    previously specified when initially installing Cilium.
 
-   For example, an 1.8 installation with the following options:
-
-   .. code-block:: txt
+   For example, an 1.8 installation with the following options::
 
       --namespace=kube-system \\
       --set global.k8sServiceHost=API_SERVER_IP \\
@@ -203,9 +202,7 @@ version which was installed in this cluster. Valid options are:
       --set global.kubeProxyReplacement=strict
 
 
-   Can be upgraded using the options below:
-
-   .. code-block:: txt
+   Can be upgraded using the options below::
 
       --namespace=kube-system \\
       --set upgradeCompatibility=1.8 \\
@@ -248,13 +245,13 @@ or something went wrong during upgrade. To undo the rollout run:
 .. tabs::
   .. group-tab:: kubectl
 
-    .. parsed-literal::
+    .. code-block:: shell-session
 
       kubectl rollout undo daemonset/cilium -n kube-system
 
   .. group-tab:: Helm
 
-    .. parsed-literal::
+    .. code-block:: shell-session
 
       helm history cilium --namespace=kube-system
       helm rollback cilium [REVISION] --namespace=kube-system
@@ -286,33 +283,15 @@ transitions, ordered by version.
 The table below lists suggested upgrade transitions, from a specified current
 version running in a cluster to a specified target version. If a specific
 combination is not listed in the table below, then it may not be safe. In that
-case, consider staging the upgrade, for example upgrading from ``1.1.x`` to the
-latest ``1.1.y`` release before subsequently upgrading to ``1.2.z``.
+case, consider performing incremental upgrades between versions (e.g. upgrade
+from ``1.9.x`` to ``1.10.y`` first, and to ``1.11.z`` only afterwards).
 
 +-----------------------+-----------------------+-------------------------+---------------------------+
 | Current version       | Target version        | L3 impact               | L7 impact                 |
 +=======================+=======================+=========================+===========================+
-| ``1.0.x``             | ``1.1.y``             | N/A                     | Clients must reconnect[1] |
+| ``1.10.x``            | ``1.11.y``            | Minimal to None         | Clients must reconnect[1] |
 +-----------------------+-----------------------+-------------------------+---------------------------+
-| ``1.1.x``             | ``1.2.y``             | Temporary disruption[2] | Clients must reconnect[1] |
-+-----------------------+-----------------------+-------------------------+---------------------------+
-| ``1.2.x``             | ``1.3.y``             | Minimal to None         | Clients must reconnect[1] |
-+-----------------------+-----------------------+-------------------------+---------------------------+
-| ``>=1.2.5``           | ``1.5.y``             | Minimal to None         | Clients must reconnect[1] |
-+-----------------------+-----------------------+-------------------------+---------------------------+
-| ``1.5.x``             | ``1.6.y``             | Minimal to None         | Clients must reconnect[1] |
-+-----------------------+-----------------------+-------------------------+---------------------------+
-| ``1.6.x``             | ``1.6.6``             | Minimal to None         | Clients must reconnect[1] |
-+-----------------------+-----------------------+-------------------------+---------------------------+
-| ``1.6.x``             | ``1.6.7``             | Minimal to None         | Clients must reconnect[1] |
-+-----------------------+-----------------------+-------------------------+---------------------------+
-| ``1.6.x``             | ``1.7.y``             | Minimal to None         | Clients must reconnect[1] |
-+-----------------------+-----------------------+-------------------------+---------------------------+
-| ``1.7.0``             | ``1.7.1``             | Minimal to None         | Clients must reconnect[1] |
-+-----------------------+-----------------------+-------------------------+---------------------------+
-| ``>=1.7.1``           | ``1.7.y``             | Minimal to None         | Clients must reconnect[1] |
-+-----------------------+-----------------------+-------------------------+---------------------------+
-| ``>=1.7.1``           | ``1.8.y``             | Minimal to None         | Clients must reconnect[1] |
+| ``1.9.x``             | ``1.10.y``            | Minimal to None         | Clients must reconnect[1] |
 +-----------------------+-----------------------+-------------------------+---------------------------+
 | ``1.8.x``             | ``1.9.y``             | Minimal to None         | Clients must reconnect[1] |
 +-----------------------+-----------------------+-------------------------+---------------------------+
@@ -324,31 +303,66 @@ Annotations:
    Endpoints communicating via the proxy must reconnect to re-establish
    connections.
 
-#. **Temporary disruption**: All traffic may be temporarily disrupted during
-   upgrade. Connections should successfully re-establish without requiring
-   clients to reconnect.
-
 .. _current_release_required_changes:
+
+.. _1.11_upgrade_notes:
+
+1.11 Upgrade Notes
+------------------
+
+Removed Options
+~~~~~~~~~~~~~~~
+
+* ``bpf-compile-debug``: This option does not have any effect since 1.10
+  and is now removed.
+* ``k8s-force-json-patch``: This option does not have any effect for
+  environments running Kubernetes >= 1.13, is deprecated since 1.10, and
+  now removed.
+* ``masquerade``: This option has been deprecated in 1.10 and replaced by
+  ``enable-ipv4-masquerade``.
+* ``skip-crd-creation``: This option does not have any effect since 1.10
+  and is now removed.
+* ``hubble-flow-buffer-size``: This option was deprecated in 1.10 in favor
+  of ``hubble-event-buffer-capacity``. It is now removed.
+
+Deprecated Options
+~~~~~~~~~~~~~~~~~~
+
+* ``native-routing-cidr``: This option has been deprecated in favor of
+  ``ipv4-native-routing-cidr`` and will be removed in 1.12.
 
 .. _1.10_upgrade_notes:
 
 1.10 Upgrade Notes
 ------------------
 
-* Cilium has bumped the minimal Kubernetes version supported to v1.13.0.
+* Cilium has bumped the minimal Kubernetes version supported to v1.16.0.
 * When using the ENI-based IPAM in conjunction with the ``--eni-tags``, failures
   to create tags are treated as errors which will result in ENIs not being
   created. Ensure that the ``ec2:CreateTags`` IAM permissions are granted.
-* To prevent Pods being scheduled by other CNI plugins during Cilium agent
-  downtime (upgrades, crashes,..), Cilium now assumes ownership of the node's
-  CNI configuration directory (``/etc/cni/net.d``) by default.
-  Existing CNI configurations are renamed to ``*.cilium_bak``, which will
-  disable solutions like [CNI-Genie](https://github.com/cni-genie/CNI-Genie)
-  as well as the default CNI plugins shipped by most managed Kubernetes
-  distributions. Set the ``cni.exclusive=false`` Helm flag to disable this
-  behaviour.
+* Cilium now takes ownership of the ``/etc/cni/net.d/`` directory on the host
+  by default. During agent startup, Cilium replaces all CNI configuration files
+  containing the word ``cilium``, and non-Cilium CNI configuration files are
+  renamed to ``*.cilium_bak``. During agent shutdown, all Cilium CNI configs
+  are removed. To disable the ``*.cilium_bak`` behaviour, set the
+  ``cni.exclusive=false`` Helm flag. To disable CNI config installation and
+  removal altogether, set the ``cni.customConf=true`` Helm flag.
+  This is useful for managing CNI configs externally.
+  See https://github.com/cilium/cilium/pull/14192 for context and related issues.
 * Helm option ``serviceAccounts.certgen`` is removed, please use ``serviceAccounts.clustermeshcertgen``
   for Clustermesh certificate generation and ``serviceAccounts.hubblecertgen`` for Hubble certificate generation.
+* For AWS ENI IPAM mode, Cilium has changed the ``first-interface-index``
+  default from ``1`` to ``0``. This means that pods will start using IPs of
+  ``eth0`` instead of ``eth1``. This allows using the maximum number of IPs
+  available on an instance by default. Be aware: Depending on your security
+  groups configuration of the ``eth0`` interface, pods may be associated with a
+  different security group all of a sudden. In order to stay with Cilium's
+  current behavior, set the value to ``1`` in the ``CiliumNode`` resource.
+* The legacy flannel integration has been deprecated. If you want to chain on
+  top of flannel, use the standard chaining method.
+* The default setting for ``kubeProxyReplacement`` has been changed from
+  ``probe`` to ``disabled``. For any new installation, if you want to use
+  kube-proxy replacement, set  ``kubeProxyReplacement`` to ``strict``.
 
 Removed Metrics/Labels
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -385,6 +399,16 @@ New Options
   and has the same desired effect as ``masquerade`` option.
 * ``cni.exclusive``: Use to toggle Cilium installing itself as the only available CNI
   plugin on all nodes.
+* ``install-no-conntrack-iptables-rules``: This option, by default set to false,
+  installs some extra Iptables rules to skip netfilter connection tracking on all
+  pod traffic. Disabling connection tracking is only possible when Cilium is
+  running in direct routing mode and is using the kube-proxy replacement.
+  Moreover, this option cannot be enabled when Cilium is running in a managed
+  Kubernetes environment or in a chained CNI setup.
+* ``allocator-list-timeout``: This option configures the timeout value for listing
+  allocator state before exiting (default 3m0s).
+* With the deprecation of the legacy flannel integration, the options
+  ``flannel-master-device`` and ``flannel-uninstall-on-exit`` have been removed.
 
 Removed Options
 ~~~~~~~~~~~~~~~
@@ -402,6 +426,9 @@ Removed Options
 Deprecated Options
 ~~~~~~~~~~~~~~~~~~
 
+* ``etcd.managed``: The managed etcd mode is being deprecated. The option and
+  all relevant code will be removed in 1.11. If you are using managed etcd, you
+  will need to run & deploy the etcd-operator yourself.
 * ``bpf-compile-debug``: This option does not have any effect since 1.10
   and is planned to be removed in 1.11.
 * ``k8s-force-json-patch``: This option does not have any effect for
@@ -410,6 +437,12 @@ Deprecated Options
   been deprecated in favor of ``enable-ipv4-masquerade`` and is planned to
   be removed in 1.11. For 1.10 release this option will have the same effect as
   ``enable-ipv4-masquerade`` where both options must not be used simultaneously.
+* ``skip-crd-creation``: This option does not have any effect since 1.10
+  and is planned to be removed in 1.11.
+* Helm options ``encryption.keyFile``, ``encryption.mountPath``,
+  ``encryption.secretName`` and ``encryption.interface`` are now deprecated in
+  favor of ``encryption.ipsec.keyFile``, ``encryption.ipsec.mountPath``,
+  ``encryption.ipsec.secretName`` and ``encryption.ipsec.interface``.
 
 .. _1.9_upgrade_notes:
 
@@ -610,12 +643,6 @@ Full list of updated Helm values:
 | global.etcd.ssl                              | etcd.ssl                                   |
 +----------------------------------------------+--------------------------------------------+
 | global.externalIPs.enabled                   | externalIPs.enabled                        |
-+----------------------------------------------+--------------------------------------------+
-| global.flannel.enabled                       | flannel.enabled                            |
-+----------------------------------------------+--------------------------------------------+
-| global.flannel.masterDevice                  | flannel.masterDevice                       |
-+----------------------------------------------+--------------------------------------------+
-| global.flannel.uninstallOnExit               | flannel.uninstallOnExit                    |
 +----------------------------------------------+--------------------------------------------+
 | global.fragmentTracking                      | fragmentTracking                           |
 +----------------------------------------------+--------------------------------------------+
@@ -825,6 +852,8 @@ Full list of updated Helm values:
 +----------------------------------------------+--------------------------------------------+
 | global.tunnel                                | tunnel                                     |
 +----------------------------------------------+--------------------------------------------+
+| global.wellKnownIdentities.enabled           | wellKnownIdentities.enabled                |
++----------------------------------------------+--------------------------------------------+
 
 Renamed Metrics
 ~~~~~~~~~~~~~~~
@@ -952,7 +981,7 @@ IMPORTANT: Changes required before upgrading to 1.8.0
 .. tabs::
   .. group-tab:: kubectl
 
-    .. parsed-literal::
+    .. code-block:: shell-session
 
       helm template cilium \
       --namespace=kube-system \
@@ -964,7 +993,7 @@ IMPORTANT: Changes required before upgrading to 1.8.0
 
   .. group-tab:: Helm
 
-    .. parsed-literal::
+    .. code-block:: shell-session
 
       helm upgrade cilium --namespace=kube-system \
       --set agent.keepDeprecatedProbes=true
@@ -976,15 +1005,15 @@ IMPORTANT: Changes required before upgrading to 1.8.0
   Running the default configuration (``--tunnel=vxlan`` or ``--tunnel=geneve``)
     No action required. The behavior remains the same as before. All traffic
     leaving the node that is not encapsulated is automatically masqueraded. You
-    may use ``--native-routing-cidr`` to further restrict traffic subject to
-    masquerading.
+    may use ``--ipv4-native-routing-cidr`` to further restrict traffic subject
+    to masquerading.
 
-  Already using ``--native-routing-cidr`` and/or ``--egress-masquerade-interfaces``
-    No action required. Use of ``--native-routing-cidr`` is the preferred way of
-    configuring masquerading.
+  Already using ``--ipv4-native-routing-cidr`` and/or ``--egress-masquerade-interfaces``
+    No action required. Use of ``--ipv4-native-routing-cidr`` is the preferred
+    way of configuring masquerading.
 
   Running in AWS ENI mode (``--ipam=eni``)
-    No action required. The value for ``--native-routing-cidr`` is
+    No action required. The value for ``--ipv4-native-routing-cidr`` is
     automatically derived from the AWS API and set to the CIDR of the VPC. You
     may overwrite the value if needed.
 
@@ -995,9 +1024,9 @@ IMPORTANT: Changes required before upgrading to 1.8.0
     The behavior has changed: Previously, the destination address range
     excluded from masquerading was defined by the options ``--ipv4-range`` and
     ``--ipv4-cluster-cidr-mask-size``. When unspecified, this was set to the
-    value ``10.0.0.0/8``. You **must** set the ``--native-routing-cidr`` option
-    and set it to the CIDR for which masquerading should be omitted. This is
-    typically the PodCIDR range of the cluster but can also be set to the IP
+    value ``10.0.0.0/8``. You **must** set the ``--ipv4-native-routing-cidr``
+    option and set it to the CIDR for which masquerading should be omitted. This
+    is typically the PodCIDR range of the cluster but can also be set to the IP
     range of the network the node is running on to avoid masquerading for
     directly reachable destinations outside of the cluster.
 
@@ -1048,7 +1077,7 @@ Upgrading from >=1.7.0 to 1.8.y
   To check whether any action is required the following command can be used to
   check the currently configured maximum number of TCP conntrack entries:
 
-  .. code:: bash
+  .. code-block:: shell-session
 
      sudo grep -R CT_MAP_SIZE_TCP /var/run/cilium/state/templates/
 
@@ -1059,7 +1088,7 @@ Upgrading from >=1.7.0 to 1.8.y
 .. tabs::
   .. group-tab:: kubectl
 
-    .. parsed-literal::
+    .. code-block:: shell-session
 
       helm template cilium \\
       --namespace=kube-system \\
@@ -1071,7 +1100,7 @@ Upgrading from >=1.7.0 to 1.8.y
 
   .. group-tab:: Helm
 
-    .. parsed-literal::
+    .. code-block:: shell-session
 
       helm upgrade cilium --namespace=kube-system \\
       --set global.bpf.ctTcpMax=100000
@@ -1092,7 +1121,7 @@ Upgrading from >=1.7.0 to 1.8.y
   To check whether any adjustment is required the following command can be used
   to check the currently configured maximum number of NAT table entries:
 
-  .. code:: bash
+  .. code-block:: shell-session
 
      sudo grep -R SNAT_MAPPING_IPV[46]_SIZE /var/run/cilium/state/globals/
 
@@ -1104,7 +1133,7 @@ Upgrading from >=1.7.0 to 1.8.y
 .. tabs::
   .. group-tab:: kubectl
 
-    .. parsed-literal::
+    .. code-block:: shell-session
 
       helm template cilium \\
       --namespace=kube-system \\
@@ -1116,7 +1145,7 @@ Upgrading from >=1.7.0 to 1.8.y
 
   .. group-tab:: Helm
 
-    .. parsed-literal::
+    .. code-block:: shell-session
 
       helm upgrade cilium --namespace=kube-system \\
       --set global.bpf.natMax=841429
@@ -1254,245 +1283,6 @@ Removed resource fields
   ``CiliumEndpoint.Status.Spec``, and ``EndpointIdentity.LabelsSHA256``,
   deprecated in 1.4, have been removed.
 
-.. _1.7_upgrade_notes:
-
-1.7 Upgrade Notes
------------------
-
-.. _1.7_required_changes:
-
-IMPORTANT: Changes required before upgrading to 1.7.x
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. warning::
-
-   Do not upgrade to 1.7.x before reading the following section and completing
-   the required steps.
-
-   In particular, if you are using network policy and upgrading from 1.6.x or earlier
-   to 1.7.x or later, you MUST read the 1.7 :ref:`configmap_remote_node_identity`
-   section about the
-   ``enable-remote-node-identity`` flag to avoid potential disruption
-   to connectivity between host networking pods and Cilium-managed pods.
-
-* Cilium has bumped the minimal Kubernetes version supported to v1.11.0.
-
-* The ``kubernetes.io/cluster-service`` label has been removed from the Cilium
-  `DaemonSet` selector. Existing users must either choose to keep this label in
-  `DaemonSet` specification to safely upgrade or re-create the Cilium `DaemonSet`
-  without the deprecated label. It is advisable to keep the label when doing
-  an upgrade from ``v1.6.x`` to ``v1.7.x`` in the event of having to do a
-  downgrade. The removal of this label should be done after a successful
-  upgrade.
-
-  The Helm option ``agent.keepDeprecatedLabels=true`` will keep the
-  ``kubernetes.io/cluster-service`` label in the new `DaemonSet`:
-
-.. tabs::
-  .. group-tab:: kubectl
-
-    .. parsed-literal::
-
-      helm template cilium \
-      --namespace=kube-system \
-      ...
-      --set agent.keepDeprecatedLabels=true \
-      ...
-      > cilium.yaml
-      kubectl apply -f cilium.yaml
-
-  .. group-tab:: Helm
-
-    .. parsed-literal::
-
-      helm upgrade cilium --namespace=kube-system \
-      --set agent.keepDeprecatedLabels=true
-
-
-  Trying to upgrade Cilium without this option might result in the following
-  error: ``The DaemonSet "cilium" is invalid: spec.selector: Invalid value: ...: field is immutable``
-
-
-* If ``kvstore`` is setup with ``etcd`` **and** TLS is enabled, the field name
-  ``ca-file`` will have its usage deprecated and will be removed in Cilium v1.8.0.
-  The new field name, ``trusted-ca-file``, can be used since Cilium v1.1.0.
-
-  *Required action:*
-
-  This field name should be changed from ``ca-file`` to ``trusted-ca-file``.
-
-  Example of an old etcd configuration, with the ``ca-file`` field name:
-
-  .. code:: yaml
-
-    ---
-    endpoints:
-    - https://192.168.0.1:2379
-    - https://192.168.0.2:2379
-    ca-file: '/var/lib/cilium/etcd-ca.pem'
-    # In case you want client to server authentication
-    key-file: '/var/lib/cilium/etcd-client.key'
-    cert-file: '/var/lib/cilium/etcd-client.crt'
-
-  Example of new etcd configuration, with the ``trusted-ca-file`` field name:
-
-  .. code:: yaml
-
-    ---
-    endpoints:
-    - https://192.168.0.1:2379
-    - https://192.168.0.2:2379
-    trusted-ca-file: '/var/lib/cilium/etcd-ca.pem'
-    # In case you want client to server authentication
-    key-file: '/var/lib/cilium/etcd-client.key'
-    cert-file: '/var/lib/cilium/etcd-client.crt'
-
-* Due to the removal of external libraries to connect to container runtimes,
-  Cilium no longer supports the option ``flannel-manage-existing-containers``.
-  Cilium will still support integration with Flannel for new containers
-  provisioned but not for containers already running in Flannel. The options
-  ``container-runtime`` and ``container-runtime-endpoint`` will not have any
-  effect and the flag removal is scheduled for v1.8.0
-
-* The default ``--tofqdns-min-ttl`` value has been reduced to 1 hour. Specific
-  IPs in DNS entries are no longer expired when in-use by existing connections
-  that are allowed by policy. Prior deployments that used the default value may
-  now experience denied new connections if endpoints reuse DNS data more than 1
-  hour after the initial lookup without making new lookups. Long lived
-  connections that previously outlived DNS entries are now better supported,
-  and will not be disconnected when the corresponding DNS entry expires.
-
-.. _configmap_remote_node_identity:
-
-New ConfigMap Options
-~~~~~~~~~~~~~~~~~~~~~
-
-  * ``enable-remote-node-identity`` has been added to enable a new identity
-    for remote cluster nodes and to associate all IPs of a node with that new
-    identity. This allows for network policies that distinguish between
-    connections from host networking pods or other processes on the local
-    Kubernetes worker node from those on remote worker nodes.
-
-    After enabling this option, all communication to and from non-local
-    Kubernetes nodes must be whitelisted with a ``toEntity`` or ``fromEntity``
-    rule listing the entity ``remote-node``. The existing entity ``cluster``
-    continues to work and now includes the entity ``remote-node``.  Existing
-    policy rules whitelisting ``host`` will only affect the local node going
-    forward. Existing CIDR-based rules to whitelist node IPs other than the
-    Cilium internal IP (IP assigned to the ``cilium_host`` interface), will no
-    longer take effect.
-
-    This is important because Kubernetes Network Policy dictates that network
-    connectivity from the local host must always be allowed, even for pods that
-    have a default deny rule for ingress connectivity.   This is so that
-    network liveness and readiness probes from kubelet will not be dropped by
-    network policy.  Prior to 1.7.x, Cilium achieved this by always allowing
-    ingress host network connectivity from any host in the cluster.  With 1.7
-    and ``enable-remote-node-identity=true``, Cilium will only automatically
-    allow connectivity from the local node, thereby providing a better default
-    security posture.
-
-    The option is enabled by default for new deployments when generated via
-    Helm, in order to gain the benefits of improved security. The Helm option
-    is ``--set global.remoteNodeIdentity``. This option can be disabled in
-    order to maintain full compatibility with Cilium 1.6.x policy enforcement.
-    **Be aware** that upgrading a cluster to 1.7.x by using Helm to generate a
-    new Cilium config that leaves ``enable-remote-node-identity`` set as the
-    default value of ``true`` **can break network connectivity.**
-
-    The reason for this is that
-    with Cilium 1.6.x, the source identity of ANY connection from a host-networking pod or from
-    other processes on a Kubernetes worker node would be the  ``host`` identity.   Thus, a
-    Cilium 1.6.x or earlier environment with network policy enforced may be implicitly
-    relying on the ``allow everything from host identity`` behavior to
-    whitelist traffic from host networking to other Cilium-managed pods.
-    With the shift to 1.7.x, if ``enable-remote-node-identity=true``
-    these connections will be denied by policy if they are coming from
-    a host-networking pod or process on another Kubernetes worker node, since the source
-    will be given the ``remote-node`` identity (which is not automatically
-    allowed) rather than the ``host`` identity (which is automatically allowed).
-
-    An indicator that this is happening would be drops visible in Hubble or
-    Cilium monitor with a source identity equal to 6 (the numeric value for the
-    new ``remote-node`` identity.   For example:
-
-    ::
-
-       xx drop (Policy denied) flow 0x6d7b6dd0 to endpoint 1657, identity 6->51566: 172.16.9.243:47278 -> 172.16.8.21:9093 tcp SYN
-
-    There are two ways to address this.  One can set
-    ``enable-remote-node-identity=false`` in the `ConfigMap` to retain the
-    Cilium 1.6.x behavior.  However, this is not ideal, as it means there is no
-    way to prevent communication between host-networking pods and
-    Cilium-managed pods, since all such connectivity is allowed automatically
-    because it is from the ``host`` identity.
-
-    The other option is to keep ``enable-remote-node-identity=true`` and
-    create policy rules that explicitly whitelist connections between
-    the ``remote-host`` identity and pods that should be reachable from host-networking pods
-    or other processes that may be running on a remote Kubernetes worker node.   An example of
-    such a rule is:
-
-
-    ::
-
-       apiVersion: "cilium.io/v2"
-       kind: CiliumNetworkPolicy
-       metadata:
-         name: "allow-from-remote-nodes"
-       spec:
-         endpointSelector:
-           matchLabels:
-             app: myapp
-         ingress:
-         - fromEntities:
-           - remote-node
-
-    See :ref:`policy-remote-node` for more examples of remote-node policies.
-
-
-  * ``enable-well-known-identities`` has been added to control the
-    initialization of the well-known identities. Well-known identities have
-    initially been added to support the managed etcd concept to allow the etcd
-    operator to bootstrap etcd while Cilium still waited on etcd to become
-    available. Cilium now uses CRDs by default which limits the use of
-    well-known identities to the managed etcd mode. With the addition of this
-    option, well-known identities are disabled by default in all new deployment
-    and only enabled if the Helm option ``global.etcd.managed=true`` is set. Consider
-    disabling this option if you are not using the etcd operator respectively
-    managed etcd mode to reduce the number of policy identities whitelisted for
-    each endpoint.
-
-  * ``kube-proxy-replacement`` has been added to control which features should
-    be enabled for the kube-proxy eBPF replacement. The option is set to
-    ``probe`` by default for new deployments when generated via Helm. This
-    makes cilium-agent to probe for each feature support in a kernel, and
-    to enable only supported features. When the option is not set via Helm,
-    cilium-agent defaults to ``partial``. This makes ``cilium-agent`` to
-    enable only those features which user has explicitly enabled in their
-    ConfigMap. See :ref:`kubeproxy-free` for more option values.
-
-    For users who previously were running with ``global.nodePort.enabled=true`` it is
-    recommended to set the option to ``strict`` before upgrading.
-
-  * ``enable-auto-protect-node-port-range`` has been added to enable
-    auto-appending of a NodePort port range to
-    ``net.ipv4.ip_local_reserved_ports`` if it overlaps with an ephemeral port
-    range from ``net.ipv4.ip_local_port_range``. The option is enabled by
-    default. See :ref:`kubeproxy-free` for the explanation why the overlap can
-    be harmful.
-
-Removed options
-~~~~~~~~~~~~~~~~~~
-
-* ``lb``: The ``--lb`` feature has been removed. If you need load-balancing on
-  a particular device, consider using :ref:`kubeproxy-free`.
-
-* ``docker`` and ``e``: This flags has been removed as Cilium no longer requires
-  container runtime integrations to manage containers' networks.
-
-* All code associated with ``monitor v1.0`` socket handling has been removed.
-
 Advanced
 ========
 
@@ -1567,7 +1357,7 @@ and the etcd is set up to have `client to server authentication <https://etcd.io
 Generate the latest ConfigMap
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. code:: bash
+.. code-block:: shell-session
 
     helm template cilium \
       --namespace=kube-system \
@@ -1626,7 +1416,7 @@ Apply new ConfigMap
 After adding the options, manually save the file with your changes and install
 the `ConfigMap` in the ``kube-system`` namespace of your cluster.
 
-::
+.. code-block:: shell-session
 
         $ kubectl apply -n kube-system -f ./cilium-cm-old.yaml
 
@@ -1751,7 +1541,7 @@ allocating identities in a way that conflicts with older ones in the kvstore.
 
 The cilium preflight manifest requires etcd support and can be built with:
 
-.. code:: bash
+.. code-block:: shell-session
 
     helm template cilium \
       --namespace=kube-system \
@@ -1803,7 +1593,7 @@ Example migration
     ``cilium`` CLI options with the preflight command. The default is to derive the
     configuration as cilium-agent does.
 
-  .. parsed-literal::
+  .. code-block:: shell-session
 
         cilium preflight migrate-identity --k8s-kubeconfig-path /var/lib/cilium/cilium.kubeconfig --kvstore etcd --kvstore-opt etcd.config=/var/lib/cilium/etcd-config.yml
 

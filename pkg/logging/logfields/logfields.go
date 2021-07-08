@@ -31,6 +31,9 @@ const (
 	// NodeName is a human readable name for the node
 	NodeName = "nodeName"
 
+	// Endpoint is the endpoint name (e.g. wireguard)
+	Endpoint = "endpoint"
+
 	// EndpointID is the numeric endpoint identifier
 	EndpointID = "endpointID"
 
@@ -103,6 +106,9 @@ const (
 
 	// DNSRequestID is the DNS request id used by dns-proxy
 	DNSRequestID = "DNSRequestID"
+
+	// MACAddr is a MAC address
+	MACAddr = "macAddr"
 
 	// IPAddr is an IPV4 or IPv6 address
 	IPAddr = "ipAddr"
@@ -178,6 +184,9 @@ const (
 
 	// CIDR is a IPv4/IPv4 subnet/CIDR
 	CIDR = "cidr"
+
+	// IPAddrs is a lsit of IP addrs
+	IPAddrs = "ipAddrs"
 
 	// MTU is the maximum transmission unit of one interface
 	MTU = "mtu"
@@ -276,6 +285,9 @@ const (
 	// CiliumLocalRedirectPolicyName is the name of a CiliumLocalRedirectPolicy
 	CiliumLocalRedirectName = "ciliumLocalRedirectPolicyName"
 
+	// CiliumEgressNATPolicyName is the name of a CiliumEgressNATPolicy
+	CiliumEgressNATPolicyName = "ciliumEgressNATPolicyName"
+
 	// BPFMapKey is a key from a BPF map
 	BPFMapKey = "bpfMapKey"
 
@@ -338,11 +350,17 @@ const (
 	// It is often paired with logfields.Repr to render the object.
 	Response = "resp"
 
+	// Resource is a resource
+	Resource = "resource"
+
 	// Route is a L2 or L3 Linux route
 	Route = "route"
 
 	// RetryUUID is an UUID identical for all retries of a set
 	RetryUUID = "retryUUID"
+
+	// Rule is an ip rule
+	Rule = "rule"
 
 	// Envoy xDS-protocol-specific
 
@@ -502,6 +520,30 @@ const (
 	// LRPBackendPorts are the parsed backend ports of the Local Redirect Policy.
 	LRPBackendPorts = "lrpBackendPorts"
 
+	// ENPName is the name of the egress nat policy
+	ENPName = "enpName"
+
 	// Mode describes an operations mode
 	Mode = "mode"
+
+	// PubKey is the public key
+	PubKey = "pubKey"
+
+	// NodeIPv4 is the node IPv4 addr
+	NodeIPv4 = "nodeIPv4"
+
+	// NodeIPv6 is the node IPv4 addr
+	NodeIPv6 = "nodeIPv6"
+
+	// OldNode refers to the node before the update
+	OldNode = "oldNode"
+
+	// NewNode refers to the node after the update
+	NewNode = "newNode"
+
+	// AttachedENIs are the ENIs which have been attached to the node
+	AttachedENIs = "attachedENIs"
+
+	// ExpectedENIs are the ENIs which are expected to be available
+	ExpectedENIs = "expectedENIs"
 )

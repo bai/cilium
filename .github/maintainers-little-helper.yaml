@@ -1,0 +1,46 @@
+project: "https://github.com/cilium/cilium/projects/155"
+column: "In progress"
+move-to-projects-for-labels-xored:
+  v1.10:
+    needs-backport/1.10:
+      project: "https://github.com/cilium/cilium/projects/162"
+      column: "Needs backport from master"
+    backport-pending/1.10:
+      project: "https://github.com/cilium/cilium/projects/162"
+      column: "Backport pending to v1.10"
+    backport-done/1.10:
+      project: "https://github.com/cilium/cilium/projects/162"
+      column: "Backport done to v1.10"
+  v1.9:
+    needs-backport/1.9:
+      project: "https://github.com/cilium/cilium/projects/160"
+      column: "Needs backport from master"
+    backport-pending/1.9:
+      project: "https://github.com/cilium/cilium/projects/160"
+      column: "Backport pending to v1.9"
+    backport-done/1.9:
+      project: "https://github.com/cilium/cilium/projects/160"
+      column: "Backport done to v1.9"
+  v1.8:
+    needs-backport/1.8:
+      project: "https://github.com/cilium/cilium/projects/156"
+      column: "Needs backport from master"
+    backport-pending/1.8:
+      project: "https://github.com/cilium/cilium/projects/156"
+      column: "Backport pending to v1.8"
+    backport-done/1.8:
+      project: "https://github.com/cilium/cilium/projects/156"
+      column: "Backport done to v1.8"
+require-msgs-in-commit:
+  - msg: "Signed-off-by"
+    helper: "https://docs.cilium.io/en/stable/contributing/development/contributing_guide/#developer-s-certificate-of-origin"
+    set-labels:
+      - "dont-merge/needs-sign-off"
+block-pr-with:
+  labels-unset:
+    - regex-label: "release-note/.*"
+      set-labels:
+        - "dont-merge/needs-release-note-label"
+  labels-set:
+    - regex-label: "dont-merge/.*"
+      helper: "Blocking mergeability of PR as 'dont-merge/.*' labels are set"

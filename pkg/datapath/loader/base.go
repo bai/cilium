@@ -29,6 +29,8 @@ import (
 	"github.com/cilium/cilium/pkg/common"
 	"github.com/cilium/cilium/pkg/datapath"
 	"github.com/cilium/cilium/pkg/datapath/alignchecker"
+	"github.com/cilium/cilium/pkg/datapath/connector"
+	"github.com/cilium/cilium/pkg/datapath/linux/ethtool"
 	"github.com/cilium/cilium/pkg/datapath/linux/linux_defaults"
 	"github.com/cilium/cilium/pkg/datapath/linux/route"
 	linuxrouting "github.com/cilium/cilium/pkg/datapath/linux/routing"
@@ -54,11 +56,7 @@ const (
 	initArgDevices
 	initArgHostDev1
 	initArgHostDev2
-	initArgXDPDevice
-	initArgXDPMode
 	initArgMTU
-	initArgIPSec
-	initArgEncryptInterface
 	initArgHostReachableServices
 	initArgHostReachableServicesUDP
 	initArgHostReachableServicesPeer
@@ -177,6 +175,65 @@ func addENIRules(sysSettings []sysctl.Setting, nodeAddressing datapath.NodeAddre
 	return retSettings, nil
 }
 
+// reinitializeIPSec is used to recompile and load encryption network programs.
+func (l *Loader) reinitializeIPSec(ctx context.Context) error {
+	if !option.Config.EnableIPSec {
+		return nil
+	}
+
+	interfaces := option.Config.EncryptInterface
+	if option.Config.IPAM == ipamOption.IPAMENI {
+		// IPAMENI mode supports multiple network facing interfaces that
+		// will all need Encrypt logic applied in order to decrypt any
+		// received encrypted packets. This logic will attach to all
+		// !veth devices. Only use if user has not configured interfaces.
+		if len(interfaces) == 0 {
+			if links, err := netlink.LinkList(); err == nil {
+				for _, link := range links {
+					isVirtual, err := ethtool.IsVirtualDriver(link.Attrs().Name)
+					if err == nil && !isVirtual {
+						interfaces = append(interfaces, link.Attrs().Name)
+					}
+				}
+			}
+			option.Config.EncryptInterface = interfaces
+		}
+	}
+
+	// No interfaces is valid in tunnel disabled case
+	if len(interfaces) != 0 {
+		for _, iface := range interfaces {
+			if err := connector.DisableRpFilter(iface); err != nil {
+				log.WithError(err).WithField(logfields.Interface, iface).Warn("Rpfilter could not be disabled, node to node encryption may fail")
+			}
+		}
+
+		if err := l.replaceNetworkDatapath(ctx, interfaces); err != nil {
+			return fmt.Errorf("failed to load encryption program: %w", err)
+		}
+	}
+	return nil
+}
+
+func (l *Loader) reinitializeXDPLocked(ctx context.Context, extraCArgs []string) error {
+	maybeUnloadObsoleteXDPPrograms(option.Config.XDPDevice, option.Config.XDPMode)
+	if option.Config.XDPDevice != "undefined" {
+		if err := compileAndLoadXDPProg(ctx, option.Config.XDPDevice, option.Config.XDPMode, extraCArgs); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ReinitializeXDP (re-)configures the XDP datapath only. This includes recompilation
+// and reinsertion of the object into the kernel as well as an atomic program replacement
+// at the XDP hook. extraCArgs can be passed-in in order to alter BPF code defines.
+func (l *Loader) ReinitializeXDP(ctx context.Context, o datapath.BaseProgramOwner, extraCArgs []string) error {
+	o.GetCompilationLock().Lock()
+	defer o.GetCompilationLock().Unlock()
+	return l.reinitializeXDPLocked(ctx, extraCArgs)
+}
+
 // Reinitialize (re-)configures the base datapath configuration including global
 // BPF programs, netfilter rule configuration and reserving routes in IPAM for
 // locally detected prefixes. It may be run upon initial Cilium startup, after
@@ -206,14 +263,6 @@ func (l *Loader) Reinitialize(ctx context.Context, o datapath.BaseProgramOwner, 
 	if err := l.writeNetdevHeader("./", o); err != nil {
 		log.WithError(err).Warn("Unable to write netdev header")
 		return err
-	}
-
-	if option.Config.XDPDevice != "undefined" {
-		args[initArgXDPDevice] = option.Config.XDPDevice
-		args[initArgXDPMode] = option.Config.XDPMode
-	} else {
-		args[initArgXDPDevice] = "<nil>"
-		args[initArgXDPMode] = "<nil>"
 	}
 
 	if option.Config.DevicePreFilter != "undefined" {
@@ -257,12 +306,6 @@ func (l *Loader) Reinitialize(ctx context.Context, o datapath.BaseProgramOwner, 
 
 	args[initArgMTU] = fmt.Sprintf("%d", deviceMTU)
 
-	if option.Config.EnableIPSec {
-		args[initArgIPSec] = "true"
-	} else {
-		args[initArgIPSec] = "false"
-	}
-
 	if option.Config.EnableHostReachableServices {
 		args[initArgHostReachableServices] = "true"
 		if option.Config.EnableHostServicesUDP {
@@ -281,12 +324,6 @@ func (l *Loader) Reinitialize(ctx context.Context, o datapath.BaseProgramOwner, 
 		args[initArgHostReachableServicesPeer] = "false"
 	}
 
-	if option.Config.EncryptInterface != "" {
-		args[initArgEncryptInterface] = option.Config.EncryptInterface
-	} else {
-		args[initArgEncryptInterface] = "<nil>"
-	}
-
 	devices := make([]netlink.Link, 0, len(option.Config.Devices))
 	if len(option.Config.Devices) != 0 {
 		for _, device := range option.Config.Devices {
@@ -298,8 +335,6 @@ func (l *Loader) Reinitialize(ctx context.Context, o datapath.BaseProgramOwner, 
 			devices = append(devices, link)
 		}
 		args[initArgDevices] = strings.Join(option.Config.Devices, ";")
-	} else if option.Config.IsFlannelMasterDeviceSet() {
-		args[initArgDevices] = option.Config.FlannelMasterDevice
 	} else {
 		args[initArgDevices] = "<nil>"
 	}
@@ -307,8 +342,6 @@ func (l *Loader) Reinitialize(ctx context.Context, o datapath.BaseProgramOwner, 
 	var mode baseDeviceMode
 	args[initArgTunnelMode] = "<nil>"
 	switch {
-	case option.Config.IsFlannelMasterDeviceSet():
-		mode = flannelMode
 	case option.Config.Tunnel != option.TunnelDisabled:
 		mode = tunnelMode
 		args[initArgTunnelMode] = option.Config.Tunnel
@@ -316,6 +349,9 @@ func (l *Loader) Reinitialize(ctx context.Context, o datapath.BaseProgramOwner, 
 		mode = ipvlanMode
 	case option.Config.EnableHealthDatapath:
 		mode = option.DSRDispatchIPIP
+		sysSettings = append(sysSettings,
+			sysctl.Setting{Name: "net.core.fb_tunnels_only_for_init_net",
+				Val: "2", IgnoreErr: true})
 	default:
 		mode = directMode
 	}
@@ -355,18 +391,6 @@ func (l *Loader) Reinitialize(ctx context.Context, o datapath.BaseProgramOwner, 
 	}).Info("Setting up BPF datapath")
 
 	if option.Config.IPAM == ipamOption.IPAMENI {
-		// For the ENI ipam mode on EKS, this will be the interface that
-		// the router (cilium_host) IP is associated to.
-		if option.Config.EncryptInterface == "" {
-			if info := node.GetRouterInfo(); info != nil {
-				mac := info.GetMac()
-				iface, err := linuxrouting.RetrieveIfaceNameFromMAC(mac.String())
-				if err != nil {
-					log.WithError(err).WithField("mac", mac).Fatal("Failed to set encrypt interface in the ENI ipam mode")
-				}
-				args[initArgEncryptInterface] = iface
-			}
-		}
 		var err error
 		if sysSettings, err = addENIRules(sysSettings, o.Datapath().LocalNodeAddressing()); err != nil {
 			return fmt.Errorf("unable to install ip rule for ENI multi-node NodePort: %w", err)
@@ -397,9 +421,15 @@ func (l *Loader) Reinitialize(ctx context.Context, o datapath.BaseProgramOwner, 
 		}
 	}
 
-	prog := filepath.Join(option.Config.BpfDir, "init.sh")
 	ctx, cancel := context.WithTimeout(ctx, defaults.ExecTimeout)
 	defer cancel()
+
+	extraArgs := []string{"-Dcapture_enabled=0"}
+	if err := l.reinitializeXDPLocked(ctx, extraArgs); err != nil {
+		log.WithError(err).Fatal("Failed to compile XDP program")
+	}
+
+	prog := filepath.Join(option.Config.BpfDir, "init.sh")
 	cmd := exec.CommandContext(ctx, prog, args...)
 	cmd.Env = bpf.Environment()
 	if _, err := cmd.CombinedOutput(log, true); err != nil {
@@ -415,29 +445,19 @@ func (l *Loader) Reinitialize(ctx context.Context, o datapath.BaseProgramOwner, 
 		log.Warning("Cannot check matching of C and Go common struct alignments due to old LLVM/clang version")
 	}
 
+	if err := l.reinitializeIPSec(ctx); err != nil {
+		return err
+	}
+
 	if err := o.Datapath().Node().NodeConfigurationChanged(*o.LocalConfig()); err != nil {
 		return err
 	}
 
-	if option.Config.InstallIptRules {
-		if err := iptMgr.TransientRulesStart(option.Config.HostDevice); err != nil {
-			log.WithError(err).Warning("failed to install transient iptables rules")
-		}
+	if err := iptMgr.InstallRules(option.Config.HostDevice, firstInitialization, option.Config.InstallIptRules); err != nil {
+		return err
 	}
-	// The iptables rules are only removed on the first initialization to
-	// remove stale rules or when iptables is enabled. The first invocation
-	// is silent as rules may not exist.
-	if firstInitialization || option.Config.InstallIptRules {
-		iptMgr.RemoveRules(firstInitialization)
-	}
-	if option.Config.InstallIptRules {
-		err := iptMgr.InstallRules(option.Config.HostDevice)
-		iptMgr.TransientRulesEnd(false)
-		if err != nil {
-			return err
-		}
-	}
-	// Reinstall proxy rules for any running proxies
+
+	// Reinstall proxy rules for any running proxies if needed
 	if p != nil {
 		p.ReinstallRules()
 	}

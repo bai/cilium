@@ -1,5 +1,5 @@
 // Copyright 2019 Authors of Hubble
-// Copyright 2020 Authors of Cilium
+// Copyright 2020-2021 Authors of Cilium
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -316,13 +316,21 @@ func (p *Parser) resolveEndpoint(ip net.IP, datapathSecurityIdentity uint32) *pb
 	if p.endpointGetter != nil {
 		if ep, ok := p.endpointGetter.GetEndpointInfo(ip); ok {
 			epIdentity := resolveIdentityConflict(ep.GetIdentity())
-			return &pb.Endpoint{
+			e := &pb.Endpoint{
 				ID:        uint32(ep.GetID()),
 				Identity:  epIdentity,
 				Namespace: ep.GetK8sNamespace(),
 				Labels:    sortAndFilterLabels(p.log, ep.GetLabels(), epIdentity),
 				PodName:   ep.GetK8sPodName(),
 			}
+			if pod := ep.GetPod(); pod != nil {
+				olen := len(pod.GetOwnerReferences())
+				e.Workloads = make([]*pb.Workload, olen)
+				for index, owner := range pod.GetOwnerReferences() {
+					e.Workloads[index] = &pb.Workload{Kind: owner.Kind, Name: owner.Name}
+				}
+			}
+			return e
 		}
 	}
 
@@ -341,7 +349,7 @@ func (p *Parser) resolveEndpoint(ip net.IP, datapathSecurityIdentity uint32) *pb
 	if p.identityGetter != nil {
 		if id, err := p.identityGetter.GetIdentity(numericIdentity); err != nil {
 			p.log.WithError(err).WithField("identity", numericIdentity).
-				Warn("failed to resolve identity")
+				Debug("failed to resolve identity")
 		} else {
 			labels = sortAndFilterLabels(p.log, id.Labels, numericIdentity)
 		}
@@ -397,6 +405,9 @@ func decodeVerdict(dn *monitor.DropNotify, tn *monitor.TraceNotify, pvn *monitor
 	case pvn != nil:
 		if pvn.Verdict < 0 {
 			return pb.Verdict_DROPPED
+		}
+		if pvn.IsTrafficAudited() {
+			return pb.Verdict_AUDIT
 		}
 		return pb.Verdict_FORWARDED
 	}
@@ -676,7 +687,7 @@ func decodeProxyPort(dbg *monitor.DebugCapture) uint32 {
 		switch dbg.SubType {
 		case monitor.DbgCaptureProxyPre,
 			monitor.DbgCaptureProxyPost:
-			return byteorder.NetworkToHost(dbg.Arg1).(uint32)
+			return byteorder.NetworkToHost32(dbg.Arg1)
 		}
 	}
 

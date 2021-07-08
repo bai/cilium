@@ -1,4 +1,4 @@
-// Copyright 2019 Authors of Cilium
+// Copyright 2019-2021 Authors of Cilium
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import (
 // Loader is an interface to abstract out loading of datapath programs.
 type Loader interface {
 	CallsMapPath(id uint16) string
+	CustomCallsMapPath(id uint16) string
 	CompileAndLoad(ctx context.Context, ep Endpoint, stats *metrics.SpanStat) error
 	CompileOrLoad(ctx context.Context, ep Endpoint, stats *metrics.SpanStat) error
 	ReloadDatapath(ctx context.Context, ep Endpoint, stats *metrics.SpanStat) error
@@ -63,18 +64,11 @@ type IptablesManager interface {
 	// rules for redirecting host proxy traffic on a specific ProxyPort)
 	InstallProxyRules(proxyPort uint16, ingress bool, name string) error
 
-	// RemoveProxyRules creates the necessary datapath config (e.g., iptables
-	// rules for redirecting host proxy traffic on a specific ProxyPort)
-	RemoveProxyRules(proxyPort uint16, ingress bool, name string) error
-
 	// SupportsOriginalSourceAddr tells if the datapath supports
 	// use of original source addresses in proxy upstream
 	// connections.
 	SupportsOriginalSourceAddr() bool
-	RemoveRules(quiet bool)
-	InstallRules(ifName string) error
-	TransientRulesStart(ifName string) error
-	TransientRulesEnd(quiet bool)
+	InstallRules(ifName string, quiet, install bool) error
 
 	// GetProxyPort fetches the existing proxy port configured for the
 	// specified listener. Used early in bootstrap to reopen proxy ports.

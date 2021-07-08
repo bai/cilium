@@ -1,4 +1,4 @@
-// Copyright 2018-2020 Authors of Cilium
+// Copyright 2018-2021 Authors of Cilium
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -168,26 +168,42 @@ func RedeployCiliumWithMerge(vm *helpers.Kubectl,
 	RedeployCilium(vm, ciliumFilename, newOpts)
 }
 
+// optionChangeRequiresPodRedeploy returns true if the difference between the
+// specified options requires redeployment of all pods to ensure that the
+// datapath is operating consistently.
+func optionChangeRequiresPodRedeploy(prev, next map[string]string) bool {
+	// See GH-16717, as of v1.10.x Cilium does not support migrating
+	// between endpointRoutes modes without restarting pods.
+	// Also, the default setting for endpointRoutes is disabled.
+	// If either of these properties change, this logic needs updating!
+	a := "false"
+	if opt, ok := prev["endpointRoutes.enabled"]; ok {
+		a = opt
+	}
+	b := "false"
+	if opt, ok := next["endpointRoutes.enabled"]; ok {
+		b = opt
+	}
+
+	return a != b
+}
+
 // DeployCiliumOptionsAndDNS deploys DNS and cilium with options into the kubernetes cluster
 func DeployCiliumOptionsAndDNS(vm *helpers.Kubectl, ciliumFilename string, options map[string]string) {
+	prevOptions := vm.CiliumOptions()
+
 	redeployCilium(vm, ciliumFilename, options)
 
 	vm.RestartUnmanagedPodsInNamespace(helpers.LogGathererNamespace)
 
-	vm.RedeployKubernetesDnsIfNecessary()
+	forceDNSRedeploy := optionChangeRequiresPodRedeploy(prevOptions, options)
+	vm.RedeployKubernetesDnsIfNecessary(forceDNSRedeploy)
 
 	switch helpers.GetCurrentIntegration() {
 	case helpers.CIIntegrationGKE:
 		if helpers.LogGathererNamespace != helpers.KubeSystemNamespace {
 			vm.RestartUnmanagedPodsInNamespace(helpers.KubeSystemNamespace)
 		}
-	}
-
-	switch helpers.GetCurrentIntegration() {
-	case helpers.CIIntegrationFlannel:
-		By("Installing Flannel")
-		vm.ApplyDefault(vm.GetFilePath("../examples/kubernetes/addons/flannel/flannel.yaml"))
-	default:
 	}
 
 	err := vm.CiliumPreFlightCheck()
@@ -215,13 +231,5 @@ func SkipIfIntegration(integration string) {
 		Skip(fmt.Sprintf(
 			"This feature is not supported in Cilium %q mode. Skipping test.",
 			integration))
-	}
-}
-
-// SkipItIfNoKubeProxy will skip It if kube-proxy is disabled (= NodePort BPF is
-// enabled)
-func SkipItIfNoKubeProxy() {
-	if !helpers.RunsWithKubeProxy() {
-		Skip("kube-proxy is disabled (NodePort BPF is enabled). Skipping test.")
 	}
 }

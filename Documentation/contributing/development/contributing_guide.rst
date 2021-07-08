@@ -14,29 +14,31 @@ Clone and Provision Environment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #. Make sure you have a `GitHub account <https://github.com/join>`_
-#. Clone the cilium repository into your ``GOPATH``.
+#. Fork the Cilium repository to your GitHub user or organization.
+#. Clone your ``${YOUR_GITHUB_USERNAME_OR_ORG}/cilium`` fork into your ``GOPATH``, and setup the base repository as ``upstream`` remote:
 
-   ::
+   .. code-block:: shell-session
 
-      mkdir -p $GOPATH/src/github.com/cilium
-      cd $GOPATH/src/github.com/cilium
-      git clone https://github.com/cilium/cilium.git
+      mkdir -p "${GOPATH}/src/github.com/cilium"
+      cd "${GOPATH}/src/github.com/cilium"
+      git clone https://github.com/${YOUR_GITHUB_USERNAME_OR_ORG}/cilium.git
       cd cilium
+      git remote add upstream https://github.com/cilium/cilium.git
 
 #. Set up your :ref:`dev_env`.
 #. Check the GitHub issues for `good tasks to get started
    <https://github.com/cilium/cilium/issues?q=is%3Aopen+is%3Aissue+label%3Agood-first-issue>`_.
+#. Follow the steps in :ref:`making_changes` to start contributing :)
 
 .. _submit_pr:
 
 Submitting a pull request
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Contributions must be submitted in the form of pull requests against the github
-repository at: https://github.com/cilium/cilium.
+Contributions must be submitted in the form of pull requests against the
+upstream GitHub repository at https://github.com/cilium/cilium.
 
-#. Fork the Cilium repository to your own personal GitHub space or request
-   access to a Cilium developer account on Slack
+#. Fork the Cilium repository.
 #. Push your changes to the topic branch in your fork of the repository.
 #. Submit a pull request on https://github.com/cilium/cilium.
 
@@ -72,15 +74,10 @@ requirements have been met:
 
         Signed-off-by: Joe Stringer <joe@cilium.io>
 
-   .. note:
+   .. note::
 
        Make sure to include a blank line in between commit title and commit
        description.
-
-   .. note:
-
-       Passing the ``-s`` option to ``git commit`` will add the
-       ``Signed-of-by:`` line to your commit message automatically.
 
 #. If any of the commits fixes a particular commit already in the tree, that
    commit is referenced in the commit message of the bugfix. This ensures that
@@ -94,7 +91,7 @@ requirements have been met:
 
       Signed-off-by: André Martins <andre@cilium.io>
 
-   .. note:
+   .. note::
 
       The proper format for the ``Fixes:`` tag referring to commits is to use
       the first 12 characters of the git SHA followed by the full commit title
@@ -110,6 +107,11 @@ requirements have been met:
       $ git commit
 
 #. All commits are signed off. See the section :ref:`dev_coo`.
+
+   .. note::
+
+       Passing the ``-s`` option to ``git commit`` will add the
+       ``Signed-off-by:`` line to your commit message automatically.
 
 #. Document any user-facing or breaking changes in ``Documentation/install/upgrade.rst``.
 
@@ -185,7 +187,7 @@ requirements have been met:
    | ``area/*`` (Optional)        | Code area this PR covers                                                  |
    +------------------------------+---------------------------------------------------------------------------+
 
-   .. note:
+   .. note::
 
       If you do not have permissions to set labels on your pull request. Leave
       a comment and a core team member will add the labels for you. Most
@@ -271,7 +273,7 @@ Pull requests review process for committers
 #. Every committer in the `committers team <https://github.com/orgs/cilium/teams/committers/members>`_
    belongs to `one or more other teams in the Cilium organization <https://github.com/orgs/cilium/teams/team/teams>`_
    if you would like to be added or removed from any team, please contact any
-   of the `maintainers <https://github.com/orgs/cilium/teams/maintainers/members>`_.
+   of the `maintainers <https://github.com/orgs/cilium/teams/cilium-maintainers/members>`_.
 
 #. Once a PR is open, GitHub will automatically pick which `teams <https://github.com/orgs/cilium/teams/team/teams>`_
    should review the PR using the ``CODEOWNERS`` file. Each committer can see
@@ -314,9 +316,9 @@ every week. The following steps describe how to perform those duties. Please
 submit changes to these steps if you have found a better way to perform each
 duty.
 
-* `People on Janitor hat this week <https://github.com/orgs/cilium/teams/janitors/members>`_
-* `People on Triage hat this week <https://github.com/orgs/cilium/teams/triage/members>`_
-* `People on Backport hat this week <https://github.com/orgs/cilium/teams/backporter/members>`_
+* `People in a Janitor hat this week <https://github.com/orgs/cilium/teams/janitors/members>`_
+* `People in a Triage hat this week <https://github.com/orgs/cilium/teams/triage/members>`_
+* `People in a Backport hat this week <https://github.com/orgs/cilium/teams/backporter/members>`_
 
 Pull request review process for Janitors team
 ---------------------------------------------
@@ -331,7 +333,7 @@ Pull request review process for Janitors team
 Dedicated expectation time for each member of Janitors team: Follow the next
 steps 1 to 2 times per day. Works best if done first thing in the working day.
 
-#. Review all PRs requesting for review in `for you <https://github.com/cilium/cilium/pulls?q=is%3Apr+is%3Aopen+draft%3Afalse+review-requested%3A%40me+sort%3Aupdated-asc>`_;
+#. Review all PRs requesting for review in `for you <https://github.com/cilium/cilium/pulls?q=is%3Apr+is%3Aopen+draft%3Afalse+team-review-requested%3Acilium%2Fjanitors+sort%3Aupdated-asc>`_;
 
 #. If this PR was opened by a non-committer (e.g. external contributor) please
    assign yourself to that PR and make sure to keep track the PR gets reviewed
@@ -414,7 +416,7 @@ steps 1 to 2 times per day. Works best if done first thing in the working day.
 
 #. If the PR is a backport PR, update the labels of cherry-picked PRs with the command included at the end of the original post. For example:
 
-   .. code-block:: bash
+   .. code-block:: shell-session
    
        $ for pr in 12589 12568; do contrib/backporting/set-labels.py $pr done 1.8; done
 
@@ -472,6 +474,35 @@ original author of that PR directly so they can backport the PR themselves.
 Follow the :ref:`backport_process` guide to know how to perform this task.
 
 .. _dev_coo:
+
+Coordination
+++++++++++++
+
+In general, coordinating in the #launchpad Slack channel with the other hat
+owner for the week is encouraged. It can reduce your workload and it will avoid
+backporting conflicts such as opening a PR with the same backports. Such
+discussions will typically revolve around which branches to tackle and which
+day of the week.
+
+An example interaction in #launchpad:
+
+::
+
+    Starting backport round for v1.7 and v1.8 now
+    cc @other-hat-wearer
+
+The other hat owner can then handle v1.9 and v1.10 backports the next day, for
+example.
+
+If there are many backports to be done, then splitting up the rounds can be
+beneficial. Typically, backporters opt to start a round in the beginning of the
+week and then another near the end of the week.
+
+By the start / end of the week, if there are other backport PRs that haven't
+been merged, then please coordinate with the previous / next backporter to
+check what the status is and establish who will work on getting the backports
+into the tree (for instance by investigating CI failures and addressing review
+feedback). There's leeway to negotiate depending on who has time available.
 
 Developer's Certificate of Origin
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -531,8 +562,4 @@ then you just add a line saying:
    Signed-off-by: Random J Developer <random@developer.example.org>
 
 Use your real name (sorry, no pseudonyms or anonymous contributions.)
-
-.. toctree::
-
-   ../../commit-access
 

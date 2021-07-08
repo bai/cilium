@@ -62,7 +62,7 @@ type DescribeVolumeStatusInput struct {
 	// actually making the request, and provides an error response. If you have the
 	// required permissions, the error response is DryRunOperation. Otherwise, it is
 	// UnauthorizedOperation.
-	DryRun bool
+	DryRun *bool
 
 	// The filters.
 	//
@@ -113,7 +113,7 @@ type DescribeVolumeStatusInput struct {
 	// If this parameter is not used, then DescribeVolumeStatus returns all results.
 	// You cannot specify this parameter and the volume IDs parameter in the same
 	// request.
-	MaxResults int32
+	MaxResults *int32
 
 	// The NextToken value to include in a future DescribeVolumeStatus request. When
 	// the results of the request exceed MaxResults, this value can be used to retrieve
@@ -236,17 +236,17 @@ type DescribeVolumeStatusPaginator struct {
 
 // NewDescribeVolumeStatusPaginator returns a new DescribeVolumeStatusPaginator
 func NewDescribeVolumeStatusPaginator(client DescribeVolumeStatusAPIClient, params *DescribeVolumeStatusInput, optFns ...func(*DescribeVolumeStatusPaginatorOptions)) *DescribeVolumeStatusPaginator {
+	if params == nil {
+		params = &DescribeVolumeStatusInput{}
+	}
+
 	options := DescribeVolumeStatusPaginatorOptions{}
-	if params.MaxResults != 0 {
-		options.Limit = params.MaxResults
+	if params.MaxResults != nil {
+		options.Limit = *params.MaxResults
 	}
 
 	for _, fn := range optFns {
 		fn(&options)
-	}
-
-	if params == nil {
-		params = &DescribeVolumeStatusInput{}
 	}
 
 	return &DescribeVolumeStatusPaginator{
@@ -271,7 +271,11 @@ func (p *DescribeVolumeStatusPaginator) NextPage(ctx context.Context, optFns ...
 	params := *p.params
 	params.NextToken = p.nextToken
 
-	params.MaxResults = p.options.Limit
+	var limit *int32
+	if p.options.Limit > 0 {
+		limit = &p.options.Limit
+	}
+	params.MaxResults = limit
 
 	result, err := p.client.DescribeVolumeStatus(ctx, &params, optFns...)
 	if err != nil {

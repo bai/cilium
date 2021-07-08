@@ -15,14 +15,12 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/cilium/cilium/pkg/bpf"
 	"github.com/cilium/cilium/pkg/common"
 	"github.com/cilium/cilium/pkg/controller"
 	"github.com/cilium/cilium/pkg/datapath"
@@ -163,31 +161,6 @@ func (e *EndpointMapManager) RemoveMapPath(path string) {
 	}
 }
 
-// waitForHostDeviceWhenReady waits the given ifaceName to be up and ready. If
-// ifaceName is not found, then it will wait forever until the device is
-// created.
-func waitForHostDeviceWhenReady(ifaceName string) error {
-	for i := 0; ; i++ {
-		if i%10 == 0 {
-			log.WithField(logfields.Interface, ifaceName).
-				Info("Waiting for the underlying interface to be initialized with containers")
-		}
-		_, err := netlink.LinkByName(ifaceName)
-		if err == nil {
-			log.WithField(logfields.Interface, ifaceName).
-				Info("Underlying interface initialized with containers!")
-			break
-		}
-		select {
-		case <-cleaner.cleanUPSig:
-			return errors.New("clean up signal triggered")
-		default:
-			time.Sleep(time.Second)
-		}
-	}
-	return nil
-}
-
 func endParallelMapMode() {
 	ipcachemap.IPCache.EndParallelMode()
 }
@@ -233,7 +206,7 @@ func (d *Daemon) syncEndpointsAndHostIPs() error {
 	if option.Config.EnableIPv6 {
 		addrs, err := d.datapath.LocalNodeAddressing().IPv6().LocalAddresses()
 		if err != nil {
-			log.WithError(err).Warning("Unable to list local IPv4 addresses")
+			log.WithError(err).Warning("Unable to list local IPv6 addresses")
 		}
 
 		addrs = append(addrs, node.GetIPv6Router())
@@ -312,18 +285,6 @@ func (d *Daemon) initMaps() error {
 		return nil
 	}
 
-	// Rename old policy call map to avoid packet drops during upgrade.
-	// TODO: Remove this renaming step once Cilium 1.8 is the oldest supported
-	// release.
-	policyMapPath := bpf.MapPath("cilium_policy")
-	if _, err := os.Stat(policyMapPath); err == nil {
-		newPolicyMapPath := bpf.MapPath(policymap.PolicyCallMapName)
-		if err = os.Rename(policyMapPath, newPolicyMapPath); err != nil {
-			log.WithError(err).Fatalf("Failed to rename policy call map from %s to %s",
-				policyMapPath, newPolicyMapPath)
-		}
-	}
-
 	if _, err := lxcmap.LXCMap.OpenOrCreate(); err != nil {
 		return err
 	}
@@ -400,13 +361,13 @@ func (d *Daemon) initMaps() error {
 	}
 
 	ipv4Nat, ipv6Nat := nat.GlobalMaps(option.Config.EnableIPv4,
-		option.Config.EnableIPv6)
-	if option.Config.EnableIPv4 {
+		option.Config.EnableIPv6, option.Config.EnableNodePort)
+	if ipv4Nat != nil {
 		if _, err := ipv4Nat.Create(); err != nil {
 			return err
 		}
 	}
-	if option.Config.EnableIPv6 {
+	if ipv6Nat != nil {
 		if _, err := ipv6Nat.Create(); err != nil {
 			return err
 		}
@@ -483,7 +444,7 @@ func (d *Daemon) initMaps() error {
 	}
 
 	if option.Config.NodePortAlg == option.NodePortAlgMaglev {
-		if err := lbmap.InitMaglevMaps(option.Config.EnableIPv4, option.Config.EnableIPv6); err != nil {
+		if err := lbmap.InitMaglevMaps(option.Config.EnableIPv4, option.Config.EnableIPv6, uint32(option.Config.MaglevTableSize)); err != nil {
 			return err
 		}
 	}

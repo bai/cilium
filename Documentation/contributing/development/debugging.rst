@@ -54,7 +54,7 @@ toFQDNs rules and events relating to those rules are also relevant.
 
     Be sure to run cilium monitor on the same node as the pod being debugged!
 
-.. code:: bash
+.. code-block:: shell-session
 
     $ kubectl exec pod/cilium-sbp8v -n kube-system -- cilium monitor --related-to 3459
     Listening for events on 4 CPUs with 64x4096 of shared memory
@@ -111,7 +111,7 @@ the issue. This can be verified with ``cilium fqdn cache list``. The IPs in the
 response should appear in the cache for the appropriate endpoint. The lookup
 time is included in the json output of the command.
 
-.. code:: bash
+.. code-block:: shell-session
 
     $ kubectl exec pod/cilium-sbp8v -n kube-system -- cilium fqdn cache list
     Endpoint   Source   FQDN         TTL    ExpirationTime             IPs
@@ -149,7 +149,7 @@ callbacks provided by other packages via daemon in cilium-agent.
   query) an error occurred. These errors would come from the internal rule
   lookup in the proxy, the ``allowed`` field.
 - ``Timeout waiting for response to forwarded proxied DNS lookup``: The proxy
-  forwards requests 1:1 and does not cache. It applies a 5s timeout on
+  forwards requests 1:1 and does not cache. It applies a 10s timeout on
   responses to those requests, as the client will retry within this period
   (usually). Bursts of these errors can happen if the DNS target server
   misbehaves and many pods see DNS timeouts. This isn't an actual problem with
@@ -190,7 +190,7 @@ If an IP exists in the FQDN cache (check with ``cilium fqdn cache list``) then
 ``matchName`` or via ``matchPattern``, should cause IPs for that domain to have
 allocated Security Identities. These can be listed with:
 
-.. code:: bash
+.. code-block:: shell-session
 
     $ kubectl exec pod/cilium-sbp8v -n kube-system -- cilium identity list
     ID         LABELS
@@ -218,7 +218,7 @@ represents each ``toFQDNs:`` rule with a ``FQDNSelector`` instance. These
 receive updates from a global ``NameManage`` in the daemon.
 They can be listed along with other selectors (roughly corresponding to any L3 rule):
 
-.. code:: bash
+.. code-block:: shell-session
 
     $ kubectl exec pod/cilium-sbp8v -n kube-system -- cilium policy selectors
     SELECTOR                                                                                                         USERS   IDENTITIES
@@ -243,7 +243,7 @@ They can be listed along with other selectors (roughly corresponding to any L3 r
 In this example 16777217 is used by two selectors, one with ``matchPattern: "*"``
 and another empty one. This is because of the policy in use:
 
-.. code:: yaml
+.. code-block:: yaml
 
     apiVersion: cilium.io/v2
     kind: CiliumNetworkPolicy
@@ -271,6 +271,29 @@ corresponds to the ``toFQDNS: matchName: "*"`` rule would list all identities
 for IPs that came from the DNS Proxy. Other CIDR identities would not be
 included.
 
+Unintended DNS Policy Drops
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``toFQDNSs`` policy enforcement relies on the source POD performing a DNS query
+before using an IP address returned in the DNS response. Sometimes PODs may hold
+on to a DNS response and start new connections to the same IP address at a later
+time. This may trigger policy drops if the DNS response has expired as
+requested by the DNS server in the time-to-live (TTL) value in the
+response. When DNS is used for service load balancing the advertised TTL value
+may be short (e.g., 60 seconds). To allow for reasonable POD behavior without
+unintended policy drops Cilium employs a configurable minimum DNS TTL value via
+``--tofqdns-min-ttl`` which defaults to 3600 seconds. This setting overrides
+short TTLs and allows the POD to use the IP address in the DNS response for one
+hour. Existing connections also keep the IP address as allowed in the
+policy. Any new connections opened by the POD using the same IP address without
+performing a new DNS query after the (possibly extended) DNS TTL has expired
+can be dropped by Cilium policy enforcement. To allow PODs to use the DNS
+response after TTL expiry for new connections a command line option
+``--tofqdns-idle-connection-grace-period`` may be used to keep the
+IP-address/name mapping valid in the policy for an extended time after DNS TTL
+expiry. This option takes effect only if the POD has opened at least one
+connection during the DNS TTL period.
+
 Datapath Plumbing
 ~~~~~~~~~~~~~~~~~
 
@@ -280,7 +303,7 @@ propagate from the selectors to the Endpoint specific policy. Unless a new
 policy is being added, this often only involves updating the Policy Map of the
 Endpoint with the new CIDR Identity of the IP. This can be verified:
 
-.. code:: bash
+.. code-block:: shell-session
 
     $ kubectl exec pod/cilium-sbp8v -n kube-system -- cilium bpf policy get 3459
     DIRECTION   LABELS (source:key[=value])   PORT/PROTO   PROXY PORT   BYTES   PACKETS
@@ -294,7 +317,7 @@ Endpoint with the new CIDR Identity of the IP. This can be verified:
 Note that the labels for identities are resolved here. This can be skipped, or
 there may be cases where this doesn't occur:
 
-.. code:: bash
+.. code-block:: shell-session
 
     $ kubectl exec pod/cilium-sbp8v -n kube-system -- cilium bpf policy get -n 3459
     DIRECTION   IDENTITY   PORT/PROTO   PROXY PORT   BYTES   PACKETS
@@ -308,7 +331,7 @@ there may be cases where this doesn't occur:
 L3 ``toFQDNs`` rules are egress only, so we would expect to see an ``Egress``
 entry with Security Identity ``16777217``. The L7 rule, used to redirect to the
 DNS Proxy is also present with a populated ``PROXY PORT``. It has a 0
-``IDENTITY`` as it is an L3 wildcard, ie the policy allows any peer on the
+``IDENTITY`` as it is an L3 wildcard, i.e. the policy allows any peer on the
 specified port.
 
 An identity missing here can be an error in various places:
@@ -347,7 +370,7 @@ Race detection
 
 To compile a Cilium binary with race detection, you can do:
 
-.. code:: bash
+.. code-block:: shell-session
 
     $ make RACE=1
 
@@ -359,7 +382,7 @@ To compile a Cilium binary with race detection, you can do:
 
 To run unit tests with race detection, you can do:
 
-.. code:: bash
+.. code-block:: shell-session
 
     $ make RACE=1 unit-tests
 
@@ -374,7 +397,7 @@ action is required, besides building the binary with this tag.
 
 For example:
 
-.. code:: bash
+.. code-block:: shell-session
 
     $ make LOCKDEBUG=1
     $ # Deadlock detection during unit tests:

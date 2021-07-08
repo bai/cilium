@@ -15,7 +15,6 @@
 package k8sTest
 
 import (
-	"context"
 	"fmt"
 	"runtime"
 	"time"
@@ -29,7 +28,9 @@ import (
 // This tests the Istio integration, following the configuration
 // instructions specified in the Istio Getting Started Guide in
 // Documentation/gettingstarted/istio.rst.
-var _ = Describe("K8sIstioTest", func() {
+// The 5.4 CI job is intended to catch BPF complexity regressions and as such
+// doesn't need to execute this test suite.
+var _ = SkipDescribeIf(helpers.RunsOn54Kernel, "K8sIstioTest", func() {
 
 	var (
 		// istioSystemNamespace is the default namespace into which Istio is
@@ -75,8 +76,7 @@ var _ = Describe("K8sIstioTest", func() {
 		wgetCommand = fmt.Sprintf("wget --tries=2 --connect-timeout %d", helpers.CurlConnectTimeout)
 		curlCommand = fmt.Sprintf("curl --retry 2 --retry-connrefused --connect-timeout %d", helpers.CurlConnectTimeout)
 
-		kubectl      *helpers.Kubectl
-		uptimeCancel context.CancelFunc
+		kubectl *helpers.Kubectl
 
 		teardownTimeout = 10 * time.Minute
 
@@ -84,12 +84,6 @@ var _ = Describe("K8sIstioTest", func() {
 	)
 
 	BeforeAll(func() {
-		k8sVersion := helpers.GetCurrentK8SEnv()
-		switch k8sVersion {
-		case "1.13":
-			Skip(fmt.Sprintf("Istio %s doesn't support K8S %s", istioVersion, k8sVersion))
-		}
-
 		kubectl = helpers.CreateKubectl(helpers.K8s1VMName(), logger)
 
 		By("Downloading cilium-istioctl")
@@ -137,15 +131,7 @@ var _ = Describe("K8sIstioTest", func() {
 		kubectl.CloseSSHClient()
 	})
 
-	JustBeforeEach(func() {
-		var err error
-		uptimeCancel, err = kubectl.BackgroundReport("uptime")
-		Expect(err).To(BeNil(), "Cannot start background report process")
-	})
-
 	JustAfterEach(func() {
-		uptimeCancel()
-
 		kubectl.ValidateNoErrorsInLogs(CurrentGinkgoTestDescription().Duration)
 	})
 

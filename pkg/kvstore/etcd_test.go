@@ -21,9 +21,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"path"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -167,7 +168,7 @@ func (s *EtcdSuite) TestETCDVersionCheck(c *C) {
 	}
 
 	// short timeout for tests
-	versionCheckTimeout = time.Second
+	atomic.StoreInt64(&versionCheckTimeout, int64(time.Second))
 
 	c.Assert(client.checkMinVersion(context.TODO()), IsNil)
 
@@ -194,7 +195,7 @@ endpoints:
 - https://cilium-etcd-client.kube-system.svc:2379
 `)
 	etcdTempFile := path.Join(temp, "etcd-config.yaml")
-	err := ioutil.WriteFile(etcdTempFile, etcdConfigByte, 0600)
+	err := os.WriteFile(etcdTempFile, etcdConfigByte, 0600)
 	c.Assert(err, IsNil)
 	type args struct {
 		backend      string

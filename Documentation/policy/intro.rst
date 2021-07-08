@@ -32,6 +32,10 @@ always
   With always mode, policy enforcement is enabled on all endpoints even if no
   rules select specific endpoints.
 
+  If you want to configure health entity to check cluster-wide connectivity when 
+  you start cilium-agent with ``enable-policy=always``, you will likely want to
+  enable communications to and from the health endpoint. See :ref:`health_endpoint`.
+
 never
   With never mode, policy enforcement is disabled on all endpoints, even if
   rules do select specific endpoints. In other words, all traffic is allowed
@@ -39,20 +43,20 @@ never
 
 To configure the policy enforcement mode at runtime for all endpoints managed by a Cilium agent, use:
 
-.. code:: bash
+.. code-block:: shell-session
 
     $ cilium config PolicyEnforcement={default,always,never}
 
 If you want to configure the policy enforcement mode at start-time for a particular agent, provide the following flag when launching the Cilium
 daemon:
 
-.. code:: bash
+.. code-block:: shell-session
 
     $ cilium-agent --enable-policy={default,always,never} [...]
 
 Similarly, you can enable the policy enforcement mode across a Kubernetes cluster by including the parameter above in the Cilium DaemonSet.
 
-.. code:: yaml
+.. code-block:: yaml
 
     - name: CILIUM_ENABLE_POLICY
       value: always

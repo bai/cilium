@@ -90,11 +90,11 @@ RancherOS_                 >= 1.5.5
           GitHub issue or by creating a pull request that updates this guide.
 
 .. note:: Systemd 245 and above (``systemctl --version``) overrides ``rp_filter`` setting
-          of Cilium network interfaces. This introduces connectivity issues (see
-          `GH-10645 <https://github.com/cilium/cilium/issues/10645>`_ for details). To
-          avoid that, configure ``rp_filter`` in systemd using the following commands:
+          of Cilium network interfaces. This introduces connectivity issues
+          (see :gh-issue:`10645` for details). To avoid that, configure
+          ``rp_filter`` in systemd using the following commands:
 
-          .. code:: bash
+          .. code-block:: shell-session
 
               echo 'net.ipv4.conf.lxc*.rp_filter = 0' > /etc/sysctl.d/99-override_cilium_rp_filter.conf
               systemctl restart systemd-sysctl
@@ -115,7 +115,7 @@ configuration options must be enabled. This is typically the case  with
 distribution kernels. When an option can be built as a module or statically
 linked, either choice is valid.
 
-.. code:: bash
+::
 
         CONFIG_BPF=y
         CONFIG_BPF_SYSCALL=y
@@ -137,7 +137,7 @@ L7 proxy redirection currently uses ``TPROXY`` iptables actions as well
 as ``socket`` matches. For L7 redirection to work as intended kernel
 configuration must include the following modules:
 
-.. code:: bash
+::
 
         CONFIG_NETFILTER_XT_TARGET_TPROXY=m
         CONFIG_NETFILTER_XT_MATCH_MARK=m
@@ -171,20 +171,21 @@ additional kernel features continues to progress in the Linux community. Some
 of Cilium's features are dependent on newer kernel versions and are thus
 enabled by upgrading to more recent kernel versions as detailed below.
 
-======================================== ===============================
-Cilium Feature                           Minimum Kernel Version
-======================================== ===============================
-:ref:`concepts_fragmentation`            >= 4.10
-:ref:`cidr_limitations`                  >= 4.11
-:ref:`encryption` in tunneling mode      >= 4.19
-:ref:`host-services`                     >= 4.19.57, >= 5.1.16,  >= 5.2
-:ref:`kubeproxy-free`                    >= 4.19.57, >= 5.1.16,  >= 5.2
-:ref:`bandwidth-manager`                 >= 5.1
-:ref:`local-redirect-policy`             >= 4.19.57, >= 5.1.16,  >= 5.2
-Full support for :ref:`session-affinity` >= 5.7
-BPF-based proxy redirection              >= 5.7
-BPF-based host routing                   >= 5.10
-======================================== ===============================
+=========================================== ===============================
+Cilium Feature                              Minimum Kernel Version
+=========================================== ===============================
+:ref:`concepts_fragmentation`               >= 4.10
+:ref:`cidr_limitations`                     >= 4.11
+:ref:`encryption_ipsec` in tunneling mode   >= 4.19
+:ref:`encryption_wg`                        >= 5.6
+:ref:`host-services`                        >= 4.19.57, >= 5.1.16,  >= 5.2
+:ref:`kubeproxy-free`                       >= 4.19.57, >= 5.1.16,  >= 5.2
+:ref:`bandwidth-manager`                    >= 5.1
+:ref:`local-redirect-policy`                >= 4.19.57, >= 5.1.16,  >= 5.2
+Full support for :ref:`session-affinity`    >= 5.7
+BPF-based proxy redirection                 >= 5.7
+BPF-based host routing                      >= 5.10
+=========================================== ===============================
 
 .. _req_kvstore:
 
@@ -318,6 +319,9 @@ Port Range / Protocol    Description
 4240/tcp                 cluster health checks (``cilium-health``)
 4244/tcp                 Hubble server
 4245/tcp                 Hubble Relay
+6060/tcp                 cilium-agent pprof server (listening on 127.0.0.1)
+6061/tcp                 cilium-operator pprof server (listening on 127.0.0.1)
+6062/tcp                 Hubble Relay pprof server (listening on 127.0.0.1)
 6942/tcp                 operator Prometheus metrics
 9090/tcp                 cilium-agent Prometheus metrics
 9876/tcp                 cilium-agent health status API
@@ -325,6 +329,7 @@ Port Range / Protocol    Description
 9891/tcp                 operator gops server (listening on 127.0.0.1)
 9892/tcp                 clustermesh-apiserver gops server (listening on 127.0.0.1)
 9893/tcp                 Hubble Relay gops server (listening on 127.0.0.1)
+51871/udp                WireGuard encryption tunnel endpoint
 ======================== ===========================================================
 
 .. _admin_mount_bpffs:
@@ -339,8 +344,8 @@ Mounted eBPF filesystem
 
         .. code-block:: shell-session
 
-                  mount | grep /sys/fs/bpf
-                  # if present should output, e.g. "none on /sys/fs/bpf type bpf"...
+            # mount | grep /sys/fs/bpf
+            $ # if present should output, e.g. "none on /sys/fs/bpf type bpf"...
 
 This step is **required for production** environments but optional for testing
 and development. It allows the ``cilium-agent`` to pin eBPF resources to a
@@ -357,15 +362,15 @@ In order to mount the eBPF filesystem, the following command must be run in the
 host mount namespace. The command must only be run once during the boot process
 of the machine.
 
-.. code:: bash
+   .. code-block:: shell-session
 
-	mount bpffs /sys/fs/bpf -t bpf
+	# mount bpffs /sys/fs/bpf -t bpf
 
 A portable way to achieve this with persistence is to add the following line to
 ``/etc/fstab`` and then run ``mount /sys/fs/bpf``. This will cause the
 filesystem to be automatically mounted when the node boots.
 
-.. code:: bash
+::
 
      bpffs			/sys/fs/bpf		bpf	defaults 0 0
 

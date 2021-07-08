@@ -1,4 +1,4 @@
-// Copyright 2016-2020 Authors of Cilium
+// Copyright 2016-2021 Authors of Cilium
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -58,7 +58,7 @@ const (
 	EndpointGenerationTimeout = 330 * time.Second
 
 	// OldCHeaderFileName is the previous name of the C header file for BPF
-	// programs for a particular endpoint. It can be removed once Cilium v1.8
+	// programs for a particular endpoint. It can be removed once Cilium v1.11
 	// is the oldest supported version.
 	oldCHeaderFileName = "lxc_config.h"
 
@@ -79,6 +79,12 @@ func (e *Endpoint) policyMapPath() string {
 // callsMapPath returns the path to cilium tail calls map of an endpoint.
 func (e *Endpoint) callsMapPath() string {
 	return e.owner.Datapath().Loader().CallsMapPath(e.ID)
+}
+
+// callsCustomMapPath returns the path to cilium custom tail calls map of an
+// endpoint.
+func (e *Endpoint) customCallsMapPath() string {
+	return e.owner.Datapath().Loader().CustomCallsMapPath(e.ID)
 }
 
 // BPFIpvlanMapPath returns the path to the ipvlan tail call map of an endpoint.
@@ -187,10 +193,10 @@ func (e *Endpoint) writeHeaderfile(prefix string) error {
 
 	err = f.CloseAtomicallyReplace()
 
-	// Create symlink with old header filename, to allow downgrade to pre-1.8
-	// Cilium. Can be removed once v1.8 is the oldest supported release.
-	// We don't add the symlink for the host endpoint so that it is not
-	// restored when downgrading to <1.8. To avoid linking to a
+	// Create symlink with old header filename, to allow downgrade to pre-1.11
+	// Cilium. Can be removed once v1.11 is the oldest supported release.
+	// The symlink is not needed for the host endpoint because we check the new
+	// header filename for that special endpoint. To avoid linking to a
 	// nonexistent file, only create the symlink if the header file
 	// creation/replacement file succeeded above.
 	if !e.IsHost() && err == nil {
@@ -637,7 +643,8 @@ func (e *Endpoint) regenerateBPF(regenContext *regenerationContext) (revnum uint
 		return datapathRegenCtxt.epInfoCache.revision, compilationExecuted, err
 	}
 
-	if !datapathRegenCtxt.epInfoCache.IsHost() {
+	if !datapathRegenCtxt.epInfoCache.IsHost() ||
+		(option.Config.EnableHostFirewall && option.Config.EnableEndpointRoutes) {
 		// Hook the endpoint into the endpoint and endpoint to policy tables then expose it
 		stats.mapSync.Start()
 		epErr := eppolicymap.WriteEndpoint(datapathRegenCtxt.epInfoCache, e.policyMap)
@@ -948,20 +955,20 @@ func (e *Endpoint) finalizeProxyState(regenContext *regenerationContext, err err
 		// Always execute the finalization code, even if the endpoint is
 		// terminating, in order to properly release resources.
 		e.unconditionalLock()
+		defer e.unlock() // In case Finalize() panics
 		e.getLogger().Debug("Finalizing successful endpoint regeneration")
 		datapathRegenCtx.finalizeList.Finalize()
-		e.unlock()
 	} else {
 		if err := e.lockAlive(); err != nil {
 			e.getLogger().WithError(err).Debug("Skipping unnecessary reverting of endpoint regeneration changes")
 			return
 		}
+		defer e.unlock() // In case Revert() panics
 		e.getLogger().Debug("Reverting endpoint changes after BPF regeneration failed")
 		if err := datapathRegenCtx.revertStack.Revert(); err != nil {
 			e.getLogger().WithError(err).Error("Reverting endpoint regeneration changes failed")
 		}
 		e.getLogger().Debug("Finished reverting endpoint changes after BPF regeneration failed")
-		e.unlock()
 	}
 }
 
@@ -985,6 +992,9 @@ func (e *Endpoint) deleteMaps() []error {
 		"policy": e.policyMapPath(),
 		"calls":  e.callsMapPath(),
 		"egress": e.BPFIpvlanMapPath(),
+	}
+	if !e.isHost {
+		maps["custom"] = e.customCallsMapPath()
 	}
 	for name, path := range maps {
 		if err := os.RemoveAll(path); err != nil {
@@ -1467,6 +1477,12 @@ func (e *Endpoint) RequireRouting() (required bool) {
 // RequireEndpointRoute returns if the endpoint wants a per endpoint route
 func (e *Endpoint) RequireEndpointRoute() bool {
 	return e.DatapathConfiguration.InstallEndpointRoute
+}
+
+// DisableSIPVerification returns true if the endpoint wants to skip
+// srcIP verification
+func (e *Endpoint) DisableSIPVerification() bool {
+	return e.DatapathConfiguration.DisableSipVerification
 }
 
 // GetPolicyVerdictLogFilter returns the PolicyVerdictLogFilter that would control

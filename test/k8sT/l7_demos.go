@@ -15,7 +15,6 @@
 package k8sTest
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
 
@@ -25,14 +24,13 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("K8sDemosTest", func() {
+// The 5.4 CI job is intended to catch BPF complexity regressions and as such
+// doesn't need to execute this test suite.
+var _ = SkipDescribeIf(helpers.RunsOn54Kernel, "K8sDemosTest", func() {
 
 	var (
 		kubectl        *helpers.Kubectl
 		ciliumFilename string
-
-		backgroundCancel context.CancelFunc = func() {}
-		backgroundError  error
 
 		deathStarYAMLLink, xwingYAMLLink, l7PolicyYAMLLink string
 	)
@@ -52,14 +50,8 @@ var _ = Describe("K8sDemosTest", func() {
 		kubectl.CiliumReport("cilium endpoint list", "cilium service list")
 	})
 
-	JustBeforeEach(func() {
-		backgroundCancel, backgroundError = kubectl.BackgroundReport("uptime")
-		Expect(backgroundError).To(BeNil(), "Cannot start background report process")
-	})
-
 	JustAfterEach(func() {
 		kubectl.ValidateNoErrorsInLogs(CurrentGinkgoTestDescription().Duration)
-		backgroundCancel()
 	})
 
 	AfterEach(func() {

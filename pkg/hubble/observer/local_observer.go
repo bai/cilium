@@ -39,6 +39,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // DefaultOptions to include in the server. Other packages may extend this
@@ -161,6 +162,15 @@ nextEvent:
 			atomic.AddUint64(&s.numObservedFlows, 1)
 		}
 
+		for _, f := range s.opts.OnDecodedEvent {
+			stop, err := f.OnDecodedEvent(ctx, ev)
+			if err != nil {
+				s.log.WithError(err).WithField("event", ev).Info("failed in OnDecodedEvent")
+			}
+			if stop {
+				continue nextEvent
+			}
+		}
 		s.GetRingBuffer().Write(ev)
 	}
 	close(s.GetStopped())
@@ -259,7 +269,7 @@ func (s *LocalObserverServer) GetFlows(
 
 	ringReader, err := newRingReader(ring, req, whitelist, blacklist)
 	if err != nil {
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			return nil
 		}
 		return err
@@ -272,12 +282,38 @@ func (s *LocalObserverServer) GetFlows(
 
 nextEvent:
 	for ; ; i++ {
-		resp, err := eventsReader.Next(ctx)
+		e, err := eventsReader.Next(ctx)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil
 			}
 			return err
+		}
+
+		var resp *observerpb.GetFlowsResponse
+
+		switch ev := e.Event.(type) {
+		case *flowpb.Flow:
+			eventsReader.eventCount++
+			resp = &observerpb.GetFlowsResponse{
+				Time:     ev.GetTime(),
+				NodeName: ev.GetNodeName(),
+				ResponseTypes: &observerpb.GetFlowsResponse_Flow{
+					Flow: ev,
+				},
+			}
+		case *flowpb.LostEvent:
+			resp = &observerpb.GetFlowsResponse{
+				Time:     e.Timestamp,
+				NodeName: nodeTypes.GetAbsoluteNodeName(),
+				ResponseTypes: &observerpb.GetFlowsResponse_LostEvents{
+					LostEvents: ev,
+				},
+			}
+		}
+
+		if resp == nil {
+			continue
 		}
 
 		for _, f := range s.opts.OnFlowDelivery {
@@ -297,6 +333,128 @@ nextEvent:
 	}
 }
 
+// GetAgentEvents implements observerpb.ObserverClient.GetAgentEvents.
+func (s *LocalObserverServer) GetAgentEvents(
+	req *observerpb.GetAgentEventsRequest,
+	server observerpb.Observer_GetAgentEventsServer,
+) (err error) {
+	ctx, cancel := context.WithCancel(server.Context())
+	defer cancel()
+
+	var whitelist, blacklist filters.FilterFuncs
+
+	start := time.Now()
+	log := s.GetLogger()
+	ring := s.GetRingBuffer()
+
+	i := uint64(0)
+	defer func() {
+		log.WithFields(logrus.Fields{
+			"number_of_agent_events": i,
+			"buffer_size":            ring.Cap(),
+			"took":                   time.Since(start),
+		}).Debug("GetAgentEvents finished")
+	}()
+
+	ringReader, err := newRingReader(ring, req, whitelist, blacklist)
+	if err != nil {
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+		return err
+	}
+
+	eventsReader, err := newEventsReader(ringReader, req, log, whitelist, blacklist)
+	if err != nil {
+		return err
+	}
+
+	for ; ; i++ {
+		e, err := eventsReader.Next(ctx)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil
+			}
+			return err
+		}
+
+		switch ev := e.Event.(type) {
+		case *flowpb.AgentEvent:
+			eventsReader.eventCount++
+			resp := &observerpb.GetAgentEventsResponse{
+				Time:       e.Timestamp,
+				NodeName:   nodeTypes.GetAbsoluteNodeName(),
+				AgentEvent: ev,
+			}
+			err = server.Send(resp)
+			if err != nil {
+				return err
+			}
+		}
+	}
+}
+
+// GetDebugEvents implements observerpb.ObserverClient.GetDebugEvents.
+func (s *LocalObserverServer) GetDebugEvents(
+	req *observerpb.GetDebugEventsRequest,
+	server observerpb.Observer_GetDebugEventsServer,
+) (err error) {
+	ctx, cancel := context.WithCancel(server.Context())
+	defer cancel()
+
+	var whitelist, blacklist filters.FilterFuncs
+
+	start := time.Now()
+	log := s.GetLogger()
+	ring := s.GetRingBuffer()
+
+	i := uint64(0)
+	defer func() {
+		log.WithFields(logrus.Fields{
+			"number_of_debug_events": i,
+			"buffer_size":            ring.Cap(),
+			"took":                   time.Since(start),
+		}).Debug("GetDebugEvents finished")
+	}()
+
+	ringReader, err := newRingReader(ring, req, whitelist, blacklist)
+	if err != nil {
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+		return err
+	}
+
+	eventsReader, err := newEventsReader(ringReader, req, log, whitelist, blacklist)
+	if err != nil {
+		return err
+	}
+
+	for ; ; i++ {
+		e, err := eventsReader.Next(ctx)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil
+			}
+			return err
+		}
+
+		switch ev := e.Event.(type) {
+		case *flowpb.DebugEvent:
+			eventsReader.eventCount++
+			resp := &observerpb.GetDebugEventsResponse{
+				Time:       e.Timestamp,
+				NodeName:   nodeTypes.GetAbsoluteNodeName(),
+				DebugEvent: ev,
+			}
+			err = server.Send(resp)
+			if err != nil {
+				return err
+			}
+		}
+	}
+}
+
 func logFilters(filters []*flowpb.FlowFilter) string {
 	s := make([]string, 0, len(filters))
 	for _, f := range filters {
@@ -304,6 +462,21 @@ func logFilters(filters []*flowpb.FlowFilter) string {
 	}
 	return "{" + strings.Join(s, ",") + "}"
 }
+
+// genericRequest allows to abstract away generic request information for
+// GetFlowsRequest, GetAgentEventsRequest and GetDebugEventsRequest.
+type genericRequest interface {
+	GetNumber() uint64
+	GetFollow() bool
+	GetSince() *timestamppb.Timestamp
+	GetUntil() *timestamppb.Timestamp
+}
+
+var (
+	_ genericRequest = (*observerpb.GetFlowsRequest)(nil)
+	_ genericRequest = (*observerpb.GetAgentEventsRequest)(nil)
+	_ genericRequest = (*observerpb.GetDebugEventsRequest)(nil)
+)
 
 // eventsReader reads flows using a RingReader. It applies the GetFlows request
 // criteria (blacklist, whitelist, follow, ...) before returning events.
@@ -319,43 +492,44 @@ type eventsReader struct {
 // newEventsReader creates a new eventsReader that uses the given RingReader to
 // read through the ring buffer. Only events that match the request criteria
 // are returned.
-func newEventsReader(r *container.RingReader, req *observerpb.GetFlowsRequest, log logrus.FieldLogger, whitelist, blacklist filters.FilterFuncs) (*eventsReader, error) {
+func newEventsReader(r *container.RingReader, req genericRequest, log logrus.FieldLogger, whitelist, blacklist filters.FilterFuncs) (*eventsReader, error) {
 	log.WithFields(logrus.Fields{
 		"req":       req,
 		"whitelist": whitelist,
 		"blacklist": blacklist,
 	}).Debug("creating a new eventsReader")
 
+	since, until := req.GetSince(), req.GetUntil()
 	reader := &eventsReader{
 		ringReader: r,
 		whitelist:  whitelist,
 		blacklist:  blacklist,
-		maxEvents:  req.Number,
-		follow:     req.Follow,
-		timeRange:  req.Since != nil || req.Until != nil,
+		maxEvents:  req.GetNumber(),
+		follow:     req.GetFollow(),
+		timeRange:  since != nil || until != nil,
 	}
 
-	if req.Since != nil {
-		if err := req.Since.CheckValid(); err != nil {
+	if since != nil {
+		if err := since.CheckValid(); err != nil {
 			return nil, err
 		}
-		since := req.Since.AsTime()
-		reader.since = &since
+		sinceTime := since.AsTime()
+		reader.since = &sinceTime
 	}
 
-	if req.Until != nil {
-		if err := req.Until.CheckValid(); err != nil {
+	if until != nil {
+		if err := until.CheckValid(); err != nil {
 			return nil, err
 		}
-		until := req.Until.AsTime()
-		reader.until = &until
+		untilTime := until.AsTime()
+		reader.until = &untilTime
 	}
 
 	return reader, nil
 }
 
-// Next returns the next flow that matches the request criteria.
-func (r *eventsReader) Next(ctx context.Context) (*observerpb.GetFlowsResponse, error) {
+// Next returns the next event that matches the request criteria.
+func (r *eventsReader) Next(ctx context.Context) (*v1.Event, error) {
 	for {
 		select {
 		case <-ctx.Done():
@@ -411,60 +585,26 @@ func (r *eventsReader) Next(ctx context.Context) (*observerpb.GetFlowsResponse, 
 			}
 		}
 
-		switch ev := e.Event.(type) {
-		case *flowpb.Flow:
-			r.eventCount++
-			return &observerpb.GetFlowsResponse{
-				Time:     ev.GetTime(),
-				NodeName: ev.GetNodeName(),
-				ResponseTypes: &observerpb.GetFlowsResponse_Flow{
-					Flow: ev,
-				},
-			}, nil
-		case *flowpb.LostEvent:
-			return &observerpb.GetFlowsResponse{
-				Time:     e.Timestamp,
-				NodeName: nodeTypes.GetName(),
-				ResponseTypes: &observerpb.GetFlowsResponse_LostEvents{
-					LostEvents: ev,
-				},
-			}, nil
-		case *flowpb.AgentEvent:
-			r.eventCount++
-			return &observerpb.GetFlowsResponse{
-				Time:     e.Timestamp,
-				NodeName: nodeTypes.GetName(),
-				ResponseTypes: &observerpb.GetFlowsResponse_AgentEvent{
-					AgentEvent: ev,
-				},
-			}, nil
-		case *flowpb.DebugEvent:
-			r.eventCount++
-			return &observerpb.GetFlowsResponse{
-				Time:     e.Timestamp,
-				NodeName: nodeTypes.GetName(),
-				ResponseTypes: &observerpb.GetFlowsResponse_DebugEvent{
-					DebugEvent: ev,
-				},
-			}, nil
-		}
+		return e, nil
 	}
 }
 
 // newRingReader creates a new RingReader that starts at the correct ring
 // offset to match the flow request.
-func newRingReader(ring *container.Ring, req *observerpb.GetFlowsRequest, whitelist, blacklist filters.FilterFuncs) (*container.RingReader, error) {
-	if req.Follow && req.Number == 0 && req.Since == nil {
+func newRingReader(ring *container.Ring, req genericRequest, whitelist, blacklist filters.FilterFuncs) (*container.RingReader, error) {
+	since := req.GetSince()
+
+	if req.GetFollow() && req.GetNumber() == 0 && since == nil {
 		// no need to rewind
 		return container.NewRingReader(ring, ring.LastWriteParallel()), nil
 	}
 
-	var since time.Time
-	if req.Since != nil {
-		if err := req.Since.CheckValid(); err != nil {
+	var sinceTime time.Time
+	if since != nil {
+		if err := since.CheckValid(); err != nil {
 			return nil, err
 		}
-		since = req.Since.AsTime()
+		sinceTime = since.AsTime()
 	}
 
 	idx := ring.LastWriteParallel()
@@ -491,16 +631,16 @@ func newRingReader(ring *container.Ring, req *observerpb.GetFlowsRequest, whitel
 			continue
 		}
 		eventCount++
-		if req.Since != nil {
+		if since != nil {
 			if err := e.Timestamp.CheckValid(); err != nil {
 				return nil, err
 			}
 			ts := e.Timestamp.AsTime()
-			if ts.Before(since) {
+			if ts.Before(sinceTime) {
 				idx++ // we went backward 1 too far
 				break
 			}
-		} else if eventCount == req.Number {
+		} else if eventCount == req.GetNumber() {
 			break // we went backward far enough
 		}
 	}

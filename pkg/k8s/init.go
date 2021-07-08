@@ -1,4 +1,4 @@
-// Copyright 2016-2020 Authors of Cilium
+// Copyright 2016-2021 Authors of Cilium
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ import (
 	"github.com/cilium/cilium/pkg/backoff"
 	"github.com/cilium/cilium/pkg/controller"
 	ipamOption "github.com/cilium/cilium/pkg/ipam/option"
-	cilium_v2_client "github.com/cilium/cilium/pkg/k8s/apis/cilium.io/v2/client"
 	k8sconfig "github.com/cilium/cilium/pkg/k8s/config"
 	k8sConst "github.com/cilium/cilium/pkg/k8s/constants"
 	slim_corev1 "github.com/cilium/cilium/pkg/k8s/slim/k8s/api/core/v1"
@@ -35,6 +34,7 @@ import (
 	"github.com/cilium/cilium/pkg/source"
 
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -42,7 +42,11 @@ const (
 	nodeRetrievalMaxRetries = 15
 )
 
-func waitForNodeInformation(ctx context.Context, nodeName string) *nodeTypes.Node {
+type nodeGetter interface {
+	GetK8sNode(ctx context.Context, nodeName string) (*corev1.Node, error)
+}
+
+func waitForNodeInformation(ctx context.Context, nodeGetter nodeGetter, nodeName string) *nodeTypes.Node {
 	backoff := backoff.Exponential{
 		Min:    time.Duration(200) * time.Millisecond,
 		Max:    2 * time.Minute,
@@ -51,7 +55,7 @@ func waitForNodeInformation(ctx context.Context, nodeName string) *nodeTypes.Nod
 	}
 
 	for retry := 0; retry < nodeRetrievalMaxRetries; retry++ {
-		n, err := retrieveNodeInformation(nodeName)
+		n, err := retrieveNodeInformation(ctx, nodeGetter, nodeName)
 		if err != nil {
 			log.WithError(err).Warning("Waiting for k8s node information")
 			backoff.Wait(ctx)
@@ -64,7 +68,7 @@ func waitForNodeInformation(ctx context.Context, nodeName string) *nodeTypes.Nod
 	return nil
 }
 
-func retrieveNodeInformation(nodeName string) (*nodeTypes.Node, error) {
+func retrieveNodeInformation(ctx context.Context, nodeGetter nodeGetter, nodeName string) (*nodeTypes.Node, error) {
 	requireIPv4CIDR := option.Config.K8sRequireIPv4PodCIDR
 	requireIPv6CIDR := option.Config.K8sRequireIPv6PodCIDR
 	// At this point it's not clear whether the device auto-detection will
@@ -75,7 +79,7 @@ func retrieveNodeInformation(nodeName string) (*nodeTypes.Node, error) {
 	var n *nodeTypes.Node
 
 	if option.Config.IPAM == ipamOption.IPAMClusterPool {
-		ciliumNode, err := CiliumClient().CiliumV2().CiliumNodes().Get(context.TODO(), nodeName, v1.GetOptions{})
+		ciliumNode, err := CiliumClient().CiliumV2().CiliumNodes().Get(ctx, nodeName, v1.GetOptions{})
 		if err != nil {
 			// If no CIDR is required, retrieving the node information is
 			// optional
@@ -90,7 +94,7 @@ func retrieveNodeInformation(nodeName string) (*nodeTypes.Node, error) {
 		n = &no
 		log.WithField(logfields.NodeName, n.Name).Info("Retrieved node information from cilium node")
 	} else {
-		k8sNode, err := GetNode(Client(), nodeName)
+		k8sNode, err := nodeGetter.GetK8sNode(ctx, nodeName)
 		if err != nil {
 			// If no CIDR is required, retrieving the node information is
 			// optional
@@ -101,12 +105,6 @@ func retrieveNodeInformation(nodeName string) (*nodeTypes.Node, error) {
 			return nil, fmt.Errorf("unable to retrieve k8s node information: %s", err)
 
 		}
-
-		// This is going to be used to detect whether cilium-agent is running on KIND
-		// to set a cgroup v2 root. The provider ID cannot be retrieved from CiliumNode
-		// object (a case above for IPAM == ClusterPool). This is fine, as long as
-		// we recommend to use IPAM = Kubernetes in the KIND getting started guide.
-		node.SetProviderID(k8sNode.Spec.ProviderID)
 
 		nodeInterface := ConvertToNode(k8sNode)
 		if nodeInterface == nil {
@@ -140,7 +138,7 @@ func useNodeCIDR(n *nodeTypes.Node) {
 		node.SetIPv4AllocRange(n.IPv4AllocCIDR)
 	}
 	if n.IPv6AllocCIDR != nil && option.Config.EnableIPv6 {
-		node.SetIPv6NodeRange(n.IPv6AllocCIDR.IPNet)
+		node.SetIPv6NodeRange(n.IPv6AllocCIDR)
 	}
 }
 
@@ -202,8 +200,9 @@ func Init(conf k8sconfig.Configuration) error {
 
 // WaitForNodeInformation retrieves the node information via the CiliumNode or
 // Kubernetes Node resource. This function will block until the information is
-// received.
-func WaitForNodeInformation() error {
+// received. nodeGetter is a function used to retrieved the node from either
+// the kube-apiserver or a local cache, depending on the caller.
+func WaitForNodeInformation(ctx context.Context, nodeGetter nodeGetter) error {
 	// Use of the environment variable overwrites the node-name
 	// automatically derived
 	nodeName := nodeTypes.GetName()
@@ -217,7 +216,7 @@ func WaitForNodeInformation() error {
 		return nil
 	}
 
-	if n := waitForNodeInformation(context.TODO(), nodeName); n != nil {
+	if n := waitForNodeInformation(ctx, nodeGetter, nodeName); n != nil {
 		nodeIP4 := n.GetNodeIP(false)
 		nodeIP6 := n.GetNodeIP(true)
 
@@ -256,6 +255,8 @@ func WaitForNodeInformation() error {
 
 		// K8s Node IP is used by BPF NodePort devices auto-detection
 		node.SetK8sNodeIP(k8sNodeIP)
+
+		restoreRouterHostIPs(n)
 	} else {
 		// if node resource could not be received, fail if
 		// PodCIDR requirement has been requested
@@ -269,15 +270,28 @@ func WaitForNodeInformation() error {
 	return nil
 }
 
-// RegisterCRDs registers all CRDs with the K8s apiserver.
-func RegisterCRDs() error {
-	if option.Config.SkipCRDCreation {
-		return nil
+// restoreRouterHostIPs restores (sets) the router IPs found from the
+// Kubernetes resource.
+//
+// Note that it does not validate the correctness of the IPs, as that is done
+// later in the daemon initialization when node.AutoComplete() is called.
+func restoreRouterHostIPs(n *nodeTypes.Node) {
+	if !option.Config.EnableHostIPRestore {
+		return
 	}
 
-	if err := cilium_v2_client.CreateCustomResourceDefinitions(APIExtClient()); err != nil {
-		return fmt.Errorf("Unable to create custom resource definition: %s", err)
+	router4 := n.GetCiliumInternalIP(false)
+	router6 := n.GetCiliumInternalIP(true)
+	if router4 != nil {
+		node.SetInternalIPv4Router(router4)
 	}
-
-	return nil
+	if router6 != nil {
+		node.SetIPv6Router(router6)
+	}
+	if router4 != nil || router6 != nil {
+		log.WithFields(logrus.Fields{
+			logfields.IPv4: router4,
+			logfields.IPv6: router6,
+		}).Info("Restored router IPs from node information")
+	}
 }

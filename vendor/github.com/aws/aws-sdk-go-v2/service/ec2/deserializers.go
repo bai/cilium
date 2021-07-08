@@ -6324,6 +6324,97 @@ func awsEc2query_deserializeOpErrorCreatePlacementGroup(response *smithyhttp.Res
 	}
 }
 
+type awsEc2query_deserializeOpCreateReplaceRootVolumeTask struct {
+}
+
+func (*awsEc2query_deserializeOpCreateReplaceRootVolumeTask) ID() string {
+	return "OperationDeserializer"
+}
+
+func (m *awsEc2query_deserializeOpCreateReplaceRootVolumeTask) HandleDeserialize(ctx context.Context, in middleware.DeserializeInput, next middleware.DeserializeHandler) (
+	out middleware.DeserializeOutput, metadata middleware.Metadata, err error,
+) {
+	out, metadata, err = next.HandleDeserialize(ctx, in)
+	if err != nil {
+		return out, metadata, err
+	}
+
+	response, ok := out.RawResponse.(*smithyhttp.Response)
+	if !ok {
+		return out, metadata, &smithy.DeserializationError{Err: fmt.Errorf("unknown transport type %T", out.RawResponse)}
+	}
+
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return out, metadata, awsEc2query_deserializeOpErrorCreateReplaceRootVolumeTask(response, &metadata)
+	}
+	output := &CreateReplaceRootVolumeTaskOutput{}
+	out.Result = output
+
+	var buff [1024]byte
+	ringBuffer := smithyio.NewRingBuffer(buff[:])
+	body := io.TeeReader(response.Body, ringBuffer)
+	rootDecoder := xml.NewDecoder(body)
+	t, err := smithyxml.FetchRootElement(rootDecoder)
+	if err == io.EOF {
+		return out, metadata, nil
+	}
+	if err != nil {
+		var snapshot bytes.Buffer
+		io.Copy(&snapshot, ringBuffer)
+		return out, metadata, &smithy.DeserializationError{
+			Err:      fmt.Errorf("failed to decode response body, %w", err),
+			Snapshot: snapshot.Bytes(),
+		}
+	}
+
+	decoder := smithyxml.WrapNodeDecoder(rootDecoder, t)
+	err = awsEc2query_deserializeOpDocumentCreateReplaceRootVolumeTaskOutput(&output, decoder)
+	if err != nil {
+		var snapshot bytes.Buffer
+		io.Copy(&snapshot, ringBuffer)
+		err = &smithy.DeserializationError{
+			Err:      fmt.Errorf("failed to decode response body, %w", err),
+			Snapshot: snapshot.Bytes(),
+		}
+		return out, metadata, err
+	}
+
+	return out, metadata, err
+}
+
+func awsEc2query_deserializeOpErrorCreateReplaceRootVolumeTask(response *smithyhttp.Response, metadata *middleware.Metadata) error {
+	var errorBuffer bytes.Buffer
+	if _, err := io.Copy(&errorBuffer, response.Body); err != nil {
+		return &smithy.DeserializationError{Err: fmt.Errorf("failed to copy error response body, %w", err)}
+	}
+	errorBody := bytes.NewReader(errorBuffer.Bytes())
+
+	errorCode := "UnknownError"
+	errorMessage := errorCode
+
+	errorComponents, err := ec2query.GetErrorResponseComponents(errorBody)
+	if err != nil {
+		return err
+	}
+	awsmiddleware.SetRequestIDMetadata(metadata, errorComponents.RequestID)
+	if len(errorComponents.Code) != 0 {
+		errorCode = errorComponents.Code
+	}
+	if len(errorComponents.Message) != 0 {
+		errorMessage = errorComponents.Message
+	}
+	errorBody.Seek(0, io.SeekStart)
+	switch {
+	default:
+		genericError := &smithy.GenericAPIError{
+			Code:    errorCode,
+			Message: errorMessage,
+		}
+		return genericError
+
+	}
+}
+
 type awsEc2query_deserializeOpCreateReservedInstancesListing struct {
 }
 
@@ -6383,6 +6474,97 @@ func (m *awsEc2query_deserializeOpCreateReservedInstancesListing) HandleDeserial
 }
 
 func awsEc2query_deserializeOpErrorCreateReservedInstancesListing(response *smithyhttp.Response, metadata *middleware.Metadata) error {
+	var errorBuffer bytes.Buffer
+	if _, err := io.Copy(&errorBuffer, response.Body); err != nil {
+		return &smithy.DeserializationError{Err: fmt.Errorf("failed to copy error response body, %w", err)}
+	}
+	errorBody := bytes.NewReader(errorBuffer.Bytes())
+
+	errorCode := "UnknownError"
+	errorMessage := errorCode
+
+	errorComponents, err := ec2query.GetErrorResponseComponents(errorBody)
+	if err != nil {
+		return err
+	}
+	awsmiddleware.SetRequestIDMetadata(metadata, errorComponents.RequestID)
+	if len(errorComponents.Code) != 0 {
+		errorCode = errorComponents.Code
+	}
+	if len(errorComponents.Message) != 0 {
+		errorMessage = errorComponents.Message
+	}
+	errorBody.Seek(0, io.SeekStart)
+	switch {
+	default:
+		genericError := &smithy.GenericAPIError{
+			Code:    errorCode,
+			Message: errorMessage,
+		}
+		return genericError
+
+	}
+}
+
+type awsEc2query_deserializeOpCreateRestoreImageTask struct {
+}
+
+func (*awsEc2query_deserializeOpCreateRestoreImageTask) ID() string {
+	return "OperationDeserializer"
+}
+
+func (m *awsEc2query_deserializeOpCreateRestoreImageTask) HandleDeserialize(ctx context.Context, in middleware.DeserializeInput, next middleware.DeserializeHandler) (
+	out middleware.DeserializeOutput, metadata middleware.Metadata, err error,
+) {
+	out, metadata, err = next.HandleDeserialize(ctx, in)
+	if err != nil {
+		return out, metadata, err
+	}
+
+	response, ok := out.RawResponse.(*smithyhttp.Response)
+	if !ok {
+		return out, metadata, &smithy.DeserializationError{Err: fmt.Errorf("unknown transport type %T", out.RawResponse)}
+	}
+
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return out, metadata, awsEc2query_deserializeOpErrorCreateRestoreImageTask(response, &metadata)
+	}
+	output := &CreateRestoreImageTaskOutput{}
+	out.Result = output
+
+	var buff [1024]byte
+	ringBuffer := smithyio.NewRingBuffer(buff[:])
+	body := io.TeeReader(response.Body, ringBuffer)
+	rootDecoder := xml.NewDecoder(body)
+	t, err := smithyxml.FetchRootElement(rootDecoder)
+	if err == io.EOF {
+		return out, metadata, nil
+	}
+	if err != nil {
+		var snapshot bytes.Buffer
+		io.Copy(&snapshot, ringBuffer)
+		return out, metadata, &smithy.DeserializationError{
+			Err:      fmt.Errorf("failed to decode response body, %w", err),
+			Snapshot: snapshot.Bytes(),
+		}
+	}
+
+	decoder := smithyxml.WrapNodeDecoder(rootDecoder, t)
+	err = awsEc2query_deserializeOpDocumentCreateRestoreImageTaskOutput(&output, decoder)
+	if err != nil {
+		var snapshot bytes.Buffer
+		io.Copy(&snapshot, ringBuffer)
+		err = &smithy.DeserializationError{
+			Err:      fmt.Errorf("failed to decode response body, %w", err),
+			Snapshot: snapshot.Bytes(),
+		}
+		return out, metadata, err
+	}
+
+	return out, metadata, err
+}
+
+func awsEc2query_deserializeOpErrorCreateRestoreImageTask(response *smithyhttp.Response, metadata *middleware.Metadata) error {
 	var errorBuffer bytes.Buffer
 	if _, err := io.Copy(&errorBuffer, response.Body); err != nil {
 		return &smithy.DeserializationError{Err: fmt.Errorf("failed to copy error response body, %w", err)}
@@ -6929,6 +7111,97 @@ func (m *awsEc2query_deserializeOpCreateSpotDatafeedSubscription) HandleDeserial
 }
 
 func awsEc2query_deserializeOpErrorCreateSpotDatafeedSubscription(response *smithyhttp.Response, metadata *middleware.Metadata) error {
+	var errorBuffer bytes.Buffer
+	if _, err := io.Copy(&errorBuffer, response.Body); err != nil {
+		return &smithy.DeserializationError{Err: fmt.Errorf("failed to copy error response body, %w", err)}
+	}
+	errorBody := bytes.NewReader(errorBuffer.Bytes())
+
+	errorCode := "UnknownError"
+	errorMessage := errorCode
+
+	errorComponents, err := ec2query.GetErrorResponseComponents(errorBody)
+	if err != nil {
+		return err
+	}
+	awsmiddleware.SetRequestIDMetadata(metadata, errorComponents.RequestID)
+	if len(errorComponents.Code) != 0 {
+		errorCode = errorComponents.Code
+	}
+	if len(errorComponents.Message) != 0 {
+		errorMessage = errorComponents.Message
+	}
+	errorBody.Seek(0, io.SeekStart)
+	switch {
+	default:
+		genericError := &smithy.GenericAPIError{
+			Code:    errorCode,
+			Message: errorMessage,
+		}
+		return genericError
+
+	}
+}
+
+type awsEc2query_deserializeOpCreateStoreImageTask struct {
+}
+
+func (*awsEc2query_deserializeOpCreateStoreImageTask) ID() string {
+	return "OperationDeserializer"
+}
+
+func (m *awsEc2query_deserializeOpCreateStoreImageTask) HandleDeserialize(ctx context.Context, in middleware.DeserializeInput, next middleware.DeserializeHandler) (
+	out middleware.DeserializeOutput, metadata middleware.Metadata, err error,
+) {
+	out, metadata, err = next.HandleDeserialize(ctx, in)
+	if err != nil {
+		return out, metadata, err
+	}
+
+	response, ok := out.RawResponse.(*smithyhttp.Response)
+	if !ok {
+		return out, metadata, &smithy.DeserializationError{Err: fmt.Errorf("unknown transport type %T", out.RawResponse)}
+	}
+
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return out, metadata, awsEc2query_deserializeOpErrorCreateStoreImageTask(response, &metadata)
+	}
+	output := &CreateStoreImageTaskOutput{}
+	out.Result = output
+
+	var buff [1024]byte
+	ringBuffer := smithyio.NewRingBuffer(buff[:])
+	body := io.TeeReader(response.Body, ringBuffer)
+	rootDecoder := xml.NewDecoder(body)
+	t, err := smithyxml.FetchRootElement(rootDecoder)
+	if err == io.EOF {
+		return out, metadata, nil
+	}
+	if err != nil {
+		var snapshot bytes.Buffer
+		io.Copy(&snapshot, ringBuffer)
+		return out, metadata, &smithy.DeserializationError{
+			Err:      fmt.Errorf("failed to decode response body, %w", err),
+			Snapshot: snapshot.Bytes(),
+		}
+	}
+
+	decoder := smithyxml.WrapNodeDecoder(rootDecoder, t)
+	err = awsEc2query_deserializeOpDocumentCreateStoreImageTaskOutput(&output, decoder)
+	if err != nil {
+		var snapshot bytes.Buffer
+		io.Copy(&snapshot, ringBuffer)
+		err = &smithy.DeserializationError{
+			Err:      fmt.Errorf("failed to decode response body, %w", err),
+			Snapshot: snapshot.Bytes(),
+		}
+		return out, metadata, err
+	}
+
+	return out, metadata, err
+}
+
+func awsEc2query_deserializeOpErrorCreateStoreImageTask(response *smithyhttp.Response, metadata *middleware.Metadata) error {
 	var errorBuffer bytes.Buffer
 	if _, err := io.Copy(&errorBuffer, response.Body); err != nil {
 		return &smithy.DeserializationError{Err: fmt.Errorf("failed to copy error response body, %w", err)}
@@ -20537,6 +20810,97 @@ func awsEc2query_deserializeOpErrorDescribeRegions(response *smithyhttp.Response
 	}
 }
 
+type awsEc2query_deserializeOpDescribeReplaceRootVolumeTasks struct {
+}
+
+func (*awsEc2query_deserializeOpDescribeReplaceRootVolumeTasks) ID() string {
+	return "OperationDeserializer"
+}
+
+func (m *awsEc2query_deserializeOpDescribeReplaceRootVolumeTasks) HandleDeserialize(ctx context.Context, in middleware.DeserializeInput, next middleware.DeserializeHandler) (
+	out middleware.DeserializeOutput, metadata middleware.Metadata, err error,
+) {
+	out, metadata, err = next.HandleDeserialize(ctx, in)
+	if err != nil {
+		return out, metadata, err
+	}
+
+	response, ok := out.RawResponse.(*smithyhttp.Response)
+	if !ok {
+		return out, metadata, &smithy.DeserializationError{Err: fmt.Errorf("unknown transport type %T", out.RawResponse)}
+	}
+
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return out, metadata, awsEc2query_deserializeOpErrorDescribeReplaceRootVolumeTasks(response, &metadata)
+	}
+	output := &DescribeReplaceRootVolumeTasksOutput{}
+	out.Result = output
+
+	var buff [1024]byte
+	ringBuffer := smithyio.NewRingBuffer(buff[:])
+	body := io.TeeReader(response.Body, ringBuffer)
+	rootDecoder := xml.NewDecoder(body)
+	t, err := smithyxml.FetchRootElement(rootDecoder)
+	if err == io.EOF {
+		return out, metadata, nil
+	}
+	if err != nil {
+		var snapshot bytes.Buffer
+		io.Copy(&snapshot, ringBuffer)
+		return out, metadata, &smithy.DeserializationError{
+			Err:      fmt.Errorf("failed to decode response body, %w", err),
+			Snapshot: snapshot.Bytes(),
+		}
+	}
+
+	decoder := smithyxml.WrapNodeDecoder(rootDecoder, t)
+	err = awsEc2query_deserializeOpDocumentDescribeReplaceRootVolumeTasksOutput(&output, decoder)
+	if err != nil {
+		var snapshot bytes.Buffer
+		io.Copy(&snapshot, ringBuffer)
+		err = &smithy.DeserializationError{
+			Err:      fmt.Errorf("failed to decode response body, %w", err),
+			Snapshot: snapshot.Bytes(),
+		}
+		return out, metadata, err
+	}
+
+	return out, metadata, err
+}
+
+func awsEc2query_deserializeOpErrorDescribeReplaceRootVolumeTasks(response *smithyhttp.Response, metadata *middleware.Metadata) error {
+	var errorBuffer bytes.Buffer
+	if _, err := io.Copy(&errorBuffer, response.Body); err != nil {
+		return &smithy.DeserializationError{Err: fmt.Errorf("failed to copy error response body, %w", err)}
+	}
+	errorBody := bytes.NewReader(errorBuffer.Bytes())
+
+	errorCode := "UnknownError"
+	errorMessage := errorCode
+
+	errorComponents, err := ec2query.GetErrorResponseComponents(errorBody)
+	if err != nil {
+		return err
+	}
+	awsmiddleware.SetRequestIDMetadata(metadata, errorComponents.RequestID)
+	if len(errorComponents.Code) != 0 {
+		errorCode = errorComponents.Code
+	}
+	if len(errorComponents.Message) != 0 {
+		errorMessage = errorComponents.Message
+	}
+	errorBody.Seek(0, io.SeekStart)
+	switch {
+	default:
+		genericError := &smithy.GenericAPIError{
+			Code:    errorCode,
+			Message: errorMessage,
+		}
+		return genericError
+
+	}
+}
+
 type awsEc2query_deserializeOpDescribeReservedInstances struct {
 }
 
@@ -22143,6 +22507,97 @@ func (m *awsEc2query_deserializeOpDescribeStaleSecurityGroups) HandleDeserialize
 }
 
 func awsEc2query_deserializeOpErrorDescribeStaleSecurityGroups(response *smithyhttp.Response, metadata *middleware.Metadata) error {
+	var errorBuffer bytes.Buffer
+	if _, err := io.Copy(&errorBuffer, response.Body); err != nil {
+		return &smithy.DeserializationError{Err: fmt.Errorf("failed to copy error response body, %w", err)}
+	}
+	errorBody := bytes.NewReader(errorBuffer.Bytes())
+
+	errorCode := "UnknownError"
+	errorMessage := errorCode
+
+	errorComponents, err := ec2query.GetErrorResponseComponents(errorBody)
+	if err != nil {
+		return err
+	}
+	awsmiddleware.SetRequestIDMetadata(metadata, errorComponents.RequestID)
+	if len(errorComponents.Code) != 0 {
+		errorCode = errorComponents.Code
+	}
+	if len(errorComponents.Message) != 0 {
+		errorMessage = errorComponents.Message
+	}
+	errorBody.Seek(0, io.SeekStart)
+	switch {
+	default:
+		genericError := &smithy.GenericAPIError{
+			Code:    errorCode,
+			Message: errorMessage,
+		}
+		return genericError
+
+	}
+}
+
+type awsEc2query_deserializeOpDescribeStoreImageTasks struct {
+}
+
+func (*awsEc2query_deserializeOpDescribeStoreImageTasks) ID() string {
+	return "OperationDeserializer"
+}
+
+func (m *awsEc2query_deserializeOpDescribeStoreImageTasks) HandleDeserialize(ctx context.Context, in middleware.DeserializeInput, next middleware.DeserializeHandler) (
+	out middleware.DeserializeOutput, metadata middleware.Metadata, err error,
+) {
+	out, metadata, err = next.HandleDeserialize(ctx, in)
+	if err != nil {
+		return out, metadata, err
+	}
+
+	response, ok := out.RawResponse.(*smithyhttp.Response)
+	if !ok {
+		return out, metadata, &smithy.DeserializationError{Err: fmt.Errorf("unknown transport type %T", out.RawResponse)}
+	}
+
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return out, metadata, awsEc2query_deserializeOpErrorDescribeStoreImageTasks(response, &metadata)
+	}
+	output := &DescribeStoreImageTasksOutput{}
+	out.Result = output
+
+	var buff [1024]byte
+	ringBuffer := smithyio.NewRingBuffer(buff[:])
+	body := io.TeeReader(response.Body, ringBuffer)
+	rootDecoder := xml.NewDecoder(body)
+	t, err := smithyxml.FetchRootElement(rootDecoder)
+	if err == io.EOF {
+		return out, metadata, nil
+	}
+	if err != nil {
+		var snapshot bytes.Buffer
+		io.Copy(&snapshot, ringBuffer)
+		return out, metadata, &smithy.DeserializationError{
+			Err:      fmt.Errorf("failed to decode response body, %w", err),
+			Snapshot: snapshot.Bytes(),
+		}
+	}
+
+	decoder := smithyxml.WrapNodeDecoder(rootDecoder, t)
+	err = awsEc2query_deserializeOpDocumentDescribeStoreImageTasksOutput(&output, decoder)
+	if err != nil {
+		var snapshot bytes.Buffer
+		io.Copy(&snapshot, ringBuffer)
+		err = &smithy.DeserializationError{
+			Err:      fmt.Errorf("failed to decode response body, %w", err),
+			Snapshot: snapshot.Bytes(),
+		}
+		return out, metadata, err
+	}
+
+	return out, metadata, err
+}
+
+func awsEc2query_deserializeOpErrorDescribeStoreImageTasks(response *smithyhttp.Response, metadata *middleware.Metadata) error {
 	var errorBuffer bytes.Buffer
 	if _, err := io.Copy(&errorBuffer, response.Body); err != nil {
 		return &smithy.DeserializationError{Err: fmt.Errorf("failed to copy error response body, %w", err)}
@@ -25473,6 +25928,97 @@ func awsEc2query_deserializeOpErrorDisableFastSnapshotRestores(response *smithyh
 	}
 }
 
+type awsEc2query_deserializeOpDisableSerialConsoleAccess struct {
+}
+
+func (*awsEc2query_deserializeOpDisableSerialConsoleAccess) ID() string {
+	return "OperationDeserializer"
+}
+
+func (m *awsEc2query_deserializeOpDisableSerialConsoleAccess) HandleDeserialize(ctx context.Context, in middleware.DeserializeInput, next middleware.DeserializeHandler) (
+	out middleware.DeserializeOutput, metadata middleware.Metadata, err error,
+) {
+	out, metadata, err = next.HandleDeserialize(ctx, in)
+	if err != nil {
+		return out, metadata, err
+	}
+
+	response, ok := out.RawResponse.(*smithyhttp.Response)
+	if !ok {
+		return out, metadata, &smithy.DeserializationError{Err: fmt.Errorf("unknown transport type %T", out.RawResponse)}
+	}
+
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return out, metadata, awsEc2query_deserializeOpErrorDisableSerialConsoleAccess(response, &metadata)
+	}
+	output := &DisableSerialConsoleAccessOutput{}
+	out.Result = output
+
+	var buff [1024]byte
+	ringBuffer := smithyio.NewRingBuffer(buff[:])
+	body := io.TeeReader(response.Body, ringBuffer)
+	rootDecoder := xml.NewDecoder(body)
+	t, err := smithyxml.FetchRootElement(rootDecoder)
+	if err == io.EOF {
+		return out, metadata, nil
+	}
+	if err != nil {
+		var snapshot bytes.Buffer
+		io.Copy(&snapshot, ringBuffer)
+		return out, metadata, &smithy.DeserializationError{
+			Err:      fmt.Errorf("failed to decode response body, %w", err),
+			Snapshot: snapshot.Bytes(),
+		}
+	}
+
+	decoder := smithyxml.WrapNodeDecoder(rootDecoder, t)
+	err = awsEc2query_deserializeOpDocumentDisableSerialConsoleAccessOutput(&output, decoder)
+	if err != nil {
+		var snapshot bytes.Buffer
+		io.Copy(&snapshot, ringBuffer)
+		err = &smithy.DeserializationError{
+			Err:      fmt.Errorf("failed to decode response body, %w", err),
+			Snapshot: snapshot.Bytes(),
+		}
+		return out, metadata, err
+	}
+
+	return out, metadata, err
+}
+
+func awsEc2query_deserializeOpErrorDisableSerialConsoleAccess(response *smithyhttp.Response, metadata *middleware.Metadata) error {
+	var errorBuffer bytes.Buffer
+	if _, err := io.Copy(&errorBuffer, response.Body); err != nil {
+		return &smithy.DeserializationError{Err: fmt.Errorf("failed to copy error response body, %w", err)}
+	}
+	errorBody := bytes.NewReader(errorBuffer.Bytes())
+
+	errorCode := "UnknownError"
+	errorMessage := errorCode
+
+	errorComponents, err := ec2query.GetErrorResponseComponents(errorBody)
+	if err != nil {
+		return err
+	}
+	awsmiddleware.SetRequestIDMetadata(metadata, errorComponents.RequestID)
+	if len(errorComponents.Code) != 0 {
+		errorCode = errorComponents.Code
+	}
+	if len(errorComponents.Message) != 0 {
+		errorMessage = errorComponents.Message
+	}
+	errorBody.Seek(0, io.SeekStart)
+	switch {
+	default:
+		genericError := &smithy.GenericAPIError{
+			Code:    errorCode,
+			Message: errorMessage,
+		}
+		return genericError
+
+	}
+}
+
 type awsEc2query_deserializeOpDisableTransitGatewayRouteTablePropagation struct {
 }
 
@@ -26737,6 +27283,97 @@ func (m *awsEc2query_deserializeOpEnableFastSnapshotRestores) HandleDeserialize(
 }
 
 func awsEc2query_deserializeOpErrorEnableFastSnapshotRestores(response *smithyhttp.Response, metadata *middleware.Metadata) error {
+	var errorBuffer bytes.Buffer
+	if _, err := io.Copy(&errorBuffer, response.Body); err != nil {
+		return &smithy.DeserializationError{Err: fmt.Errorf("failed to copy error response body, %w", err)}
+	}
+	errorBody := bytes.NewReader(errorBuffer.Bytes())
+
+	errorCode := "UnknownError"
+	errorMessage := errorCode
+
+	errorComponents, err := ec2query.GetErrorResponseComponents(errorBody)
+	if err != nil {
+		return err
+	}
+	awsmiddleware.SetRequestIDMetadata(metadata, errorComponents.RequestID)
+	if len(errorComponents.Code) != 0 {
+		errorCode = errorComponents.Code
+	}
+	if len(errorComponents.Message) != 0 {
+		errorMessage = errorComponents.Message
+	}
+	errorBody.Seek(0, io.SeekStart)
+	switch {
+	default:
+		genericError := &smithy.GenericAPIError{
+			Code:    errorCode,
+			Message: errorMessage,
+		}
+		return genericError
+
+	}
+}
+
+type awsEc2query_deserializeOpEnableSerialConsoleAccess struct {
+}
+
+func (*awsEc2query_deserializeOpEnableSerialConsoleAccess) ID() string {
+	return "OperationDeserializer"
+}
+
+func (m *awsEc2query_deserializeOpEnableSerialConsoleAccess) HandleDeserialize(ctx context.Context, in middleware.DeserializeInput, next middleware.DeserializeHandler) (
+	out middleware.DeserializeOutput, metadata middleware.Metadata, err error,
+) {
+	out, metadata, err = next.HandleDeserialize(ctx, in)
+	if err != nil {
+		return out, metadata, err
+	}
+
+	response, ok := out.RawResponse.(*smithyhttp.Response)
+	if !ok {
+		return out, metadata, &smithy.DeserializationError{Err: fmt.Errorf("unknown transport type %T", out.RawResponse)}
+	}
+
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return out, metadata, awsEc2query_deserializeOpErrorEnableSerialConsoleAccess(response, &metadata)
+	}
+	output := &EnableSerialConsoleAccessOutput{}
+	out.Result = output
+
+	var buff [1024]byte
+	ringBuffer := smithyio.NewRingBuffer(buff[:])
+	body := io.TeeReader(response.Body, ringBuffer)
+	rootDecoder := xml.NewDecoder(body)
+	t, err := smithyxml.FetchRootElement(rootDecoder)
+	if err == io.EOF {
+		return out, metadata, nil
+	}
+	if err != nil {
+		var snapshot bytes.Buffer
+		io.Copy(&snapshot, ringBuffer)
+		return out, metadata, &smithy.DeserializationError{
+			Err:      fmt.Errorf("failed to decode response body, %w", err),
+			Snapshot: snapshot.Bytes(),
+		}
+	}
+
+	decoder := smithyxml.WrapNodeDecoder(rootDecoder, t)
+	err = awsEc2query_deserializeOpDocumentEnableSerialConsoleAccessOutput(&output, decoder)
+	if err != nil {
+		var snapshot bytes.Buffer
+		io.Copy(&snapshot, ringBuffer)
+		err = &smithy.DeserializationError{
+			Err:      fmt.Errorf("failed to decode response body, %w", err),
+			Snapshot: snapshot.Bytes(),
+		}
+		return out, metadata, err
+	}
+
+	return out, metadata, err
+}
+
+func awsEc2query_deserializeOpErrorEnableSerialConsoleAccess(response *smithyhttp.Response, metadata *middleware.Metadata) error {
 	var errorBuffer bytes.Buffer
 	if _, err := io.Copy(&errorBuffer, response.Body); err != nil {
 		return &smithy.DeserializationError{Err: fmt.Errorf("failed to copy error response body, %w", err)}
@@ -28361,6 +28998,97 @@ func awsEc2query_deserializeOpErrorGetEbsEncryptionByDefault(response *smithyhtt
 	}
 }
 
+type awsEc2query_deserializeOpGetFlowLogsIntegrationTemplate struct {
+}
+
+func (*awsEc2query_deserializeOpGetFlowLogsIntegrationTemplate) ID() string {
+	return "OperationDeserializer"
+}
+
+func (m *awsEc2query_deserializeOpGetFlowLogsIntegrationTemplate) HandleDeserialize(ctx context.Context, in middleware.DeserializeInput, next middleware.DeserializeHandler) (
+	out middleware.DeserializeOutput, metadata middleware.Metadata, err error,
+) {
+	out, metadata, err = next.HandleDeserialize(ctx, in)
+	if err != nil {
+		return out, metadata, err
+	}
+
+	response, ok := out.RawResponse.(*smithyhttp.Response)
+	if !ok {
+		return out, metadata, &smithy.DeserializationError{Err: fmt.Errorf("unknown transport type %T", out.RawResponse)}
+	}
+
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return out, metadata, awsEc2query_deserializeOpErrorGetFlowLogsIntegrationTemplate(response, &metadata)
+	}
+	output := &GetFlowLogsIntegrationTemplateOutput{}
+	out.Result = output
+
+	var buff [1024]byte
+	ringBuffer := smithyio.NewRingBuffer(buff[:])
+	body := io.TeeReader(response.Body, ringBuffer)
+	rootDecoder := xml.NewDecoder(body)
+	t, err := smithyxml.FetchRootElement(rootDecoder)
+	if err == io.EOF {
+		return out, metadata, nil
+	}
+	if err != nil {
+		var snapshot bytes.Buffer
+		io.Copy(&snapshot, ringBuffer)
+		return out, metadata, &smithy.DeserializationError{
+			Err:      fmt.Errorf("failed to decode response body, %w", err),
+			Snapshot: snapshot.Bytes(),
+		}
+	}
+
+	decoder := smithyxml.WrapNodeDecoder(rootDecoder, t)
+	err = awsEc2query_deserializeOpDocumentGetFlowLogsIntegrationTemplateOutput(&output, decoder)
+	if err != nil {
+		var snapshot bytes.Buffer
+		io.Copy(&snapshot, ringBuffer)
+		err = &smithy.DeserializationError{
+			Err:      fmt.Errorf("failed to decode response body, %w", err),
+			Snapshot: snapshot.Bytes(),
+		}
+		return out, metadata, err
+	}
+
+	return out, metadata, err
+}
+
+func awsEc2query_deserializeOpErrorGetFlowLogsIntegrationTemplate(response *smithyhttp.Response, metadata *middleware.Metadata) error {
+	var errorBuffer bytes.Buffer
+	if _, err := io.Copy(&errorBuffer, response.Body); err != nil {
+		return &smithy.DeserializationError{Err: fmt.Errorf("failed to copy error response body, %w", err)}
+	}
+	errorBody := bytes.NewReader(errorBuffer.Bytes())
+
+	errorCode := "UnknownError"
+	errorMessage := errorCode
+
+	errorComponents, err := ec2query.GetErrorResponseComponents(errorBody)
+	if err != nil {
+		return err
+	}
+	awsmiddleware.SetRequestIDMetadata(metadata, errorComponents.RequestID)
+	if len(errorComponents.Code) != 0 {
+		errorCode = errorComponents.Code
+	}
+	if len(errorComponents.Message) != 0 {
+		errorMessage = errorComponents.Message
+	}
+	errorBody.Seek(0, io.SeekStart)
+	switch {
+	default:
+		genericError := &smithy.GenericAPIError{
+			Code:    errorCode,
+			Message: errorMessage,
+		}
+		return genericError
+
+	}
+}
+
 type awsEc2query_deserializeOpGetGroupsForCapacityReservation struct {
 }
 
@@ -28966,6 +29694,97 @@ func (m *awsEc2query_deserializeOpGetReservedInstancesExchangeQuote) HandleDeser
 }
 
 func awsEc2query_deserializeOpErrorGetReservedInstancesExchangeQuote(response *smithyhttp.Response, metadata *middleware.Metadata) error {
+	var errorBuffer bytes.Buffer
+	if _, err := io.Copy(&errorBuffer, response.Body); err != nil {
+		return &smithy.DeserializationError{Err: fmt.Errorf("failed to copy error response body, %w", err)}
+	}
+	errorBody := bytes.NewReader(errorBuffer.Bytes())
+
+	errorCode := "UnknownError"
+	errorMessage := errorCode
+
+	errorComponents, err := ec2query.GetErrorResponseComponents(errorBody)
+	if err != nil {
+		return err
+	}
+	awsmiddleware.SetRequestIDMetadata(metadata, errorComponents.RequestID)
+	if len(errorComponents.Code) != 0 {
+		errorCode = errorComponents.Code
+	}
+	if len(errorComponents.Message) != 0 {
+		errorMessage = errorComponents.Message
+	}
+	errorBody.Seek(0, io.SeekStart)
+	switch {
+	default:
+		genericError := &smithy.GenericAPIError{
+			Code:    errorCode,
+			Message: errorMessage,
+		}
+		return genericError
+
+	}
+}
+
+type awsEc2query_deserializeOpGetSerialConsoleAccessStatus struct {
+}
+
+func (*awsEc2query_deserializeOpGetSerialConsoleAccessStatus) ID() string {
+	return "OperationDeserializer"
+}
+
+func (m *awsEc2query_deserializeOpGetSerialConsoleAccessStatus) HandleDeserialize(ctx context.Context, in middleware.DeserializeInput, next middleware.DeserializeHandler) (
+	out middleware.DeserializeOutput, metadata middleware.Metadata, err error,
+) {
+	out, metadata, err = next.HandleDeserialize(ctx, in)
+	if err != nil {
+		return out, metadata, err
+	}
+
+	response, ok := out.RawResponse.(*smithyhttp.Response)
+	if !ok {
+		return out, metadata, &smithy.DeserializationError{Err: fmt.Errorf("unknown transport type %T", out.RawResponse)}
+	}
+
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return out, metadata, awsEc2query_deserializeOpErrorGetSerialConsoleAccessStatus(response, &metadata)
+	}
+	output := &GetSerialConsoleAccessStatusOutput{}
+	out.Result = output
+
+	var buff [1024]byte
+	ringBuffer := smithyio.NewRingBuffer(buff[:])
+	body := io.TeeReader(response.Body, ringBuffer)
+	rootDecoder := xml.NewDecoder(body)
+	t, err := smithyxml.FetchRootElement(rootDecoder)
+	if err == io.EOF {
+		return out, metadata, nil
+	}
+	if err != nil {
+		var snapshot bytes.Buffer
+		io.Copy(&snapshot, ringBuffer)
+		return out, metadata, &smithy.DeserializationError{
+			Err:      fmt.Errorf("failed to decode response body, %w", err),
+			Snapshot: snapshot.Bytes(),
+		}
+	}
+
+	decoder := smithyxml.WrapNodeDecoder(rootDecoder, t)
+	err = awsEc2query_deserializeOpDocumentGetSerialConsoleAccessStatusOutput(&output, decoder)
+	if err != nil {
+		var snapshot bytes.Buffer
+		io.Copy(&snapshot, ringBuffer)
+		err = &smithy.DeserializationError{
+			Err:      fmt.Errorf("failed to decode response body, %w", err),
+			Snapshot: snapshot.Bytes(),
+		}
+		return out, metadata, err
+	}
+
+	return out, metadata, err
+}
+
+func awsEc2query_deserializeOpErrorGetSerialConsoleAccessStatus(response *smithyhttp.Response, metadata *middleware.Metadata) error {
 	var errorBuffer bytes.Buffer
 	if _, err := io.Copy(&errorBuffer, response.Body); err != nil {
 		return &smithy.DeserializationError{Err: fmt.Errorf("failed to copy error response body, %w", err)}
@@ -39862,7 +40681,7 @@ func awsEc2query_deserializeDocumentAnalysisAclRule(v **types.AnalysisAclRule, d
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Egress = xtv
+				sv.Egress = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("portRange", t.Name.Local):
@@ -39911,7 +40730,7 @@ func awsEc2query_deserializeDocumentAnalysisAclRule(v **types.AnalysisAclRule, d
 				if err != nil {
 					return err
 				}
-				sv.RuleNumber = int32(i64)
+				sv.RuleNumber = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -40094,7 +40913,7 @@ func awsEc2query_deserializeDocumentAnalysisLoadBalancerListener(v **types.Analy
 				if err != nil {
 					return err
 				}
-				sv.InstancePort = int32(i64)
+				sv.InstancePort = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("loadBalancerPort", t.Name.Local):
@@ -40111,7 +40930,7 @@ func awsEc2query_deserializeDocumentAnalysisLoadBalancerListener(v **types.Analy
 				if err != nil {
 					return err
 				}
-				sv.LoadBalancerPort = int32(i64)
+				sv.LoadBalancerPort = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -40196,7 +41015,7 @@ func awsEc2query_deserializeDocumentAnalysisLoadBalancerTarget(v **types.Analysi
 				if err != nil {
 					return err
 				}
-				sv.Port = int32(i64)
+				sv.Port = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -41219,7 +42038,7 @@ func awsEc2query_deserializeDocumentAttributeBooleanValue(v **types.AttributeBoo
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Value = xtv
+				sv.Value = ptr.Bool(xtv)
 			}
 
 		default:
@@ -41320,7 +42139,7 @@ func awsEc2query_deserializeDocumentAuthorizationRule(v **types.AuthorizationRul
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.AccessAll = xtv
+				sv.AccessAll = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("clientVpnEndpointId", t.Name.Local):
@@ -41862,7 +42681,7 @@ func awsEc2query_deserializeDocumentAvailableCapacity(v **types.AvailableCapacit
 				if err != nil {
 					return err
 				}
-				sv.AvailableVCpus = int32(i64)
+				sv.AvailableVCpus = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -43116,7 +43935,7 @@ func awsEc2query_deserializeDocumentCapacityReservation(v **types.CapacityReserv
 				if err != nil {
 					return err
 				}
-				sv.AvailableInstanceCount = int32(i64)
+				sv.AvailableInstanceCount = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("capacityReservationArn", t.Name.Local):
@@ -43175,7 +43994,7 @@ func awsEc2query_deserializeDocumentCapacityReservation(v **types.CapacityReserv
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.EbsOptimized = xtv
+				sv.EbsOptimized = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("endDate", t.Name.Local):
@@ -43221,7 +44040,7 @@ func awsEc2query_deserializeDocumentCapacityReservation(v **types.CapacityReserv
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.EphemeralStorage = xtv
+				sv.EphemeralStorage = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("instanceMatchCriteria", t.Name.Local):
@@ -43263,6 +44082,19 @@ func awsEc2query_deserializeDocumentCapacityReservation(v **types.CapacityReserv
 				sv.InstanceType = ptr.String(xtv)
 			}
 
+		case strings.EqualFold("outpostArn", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				sv.OutpostArn = ptr.String(xtv)
+			}
+
 		case strings.EqualFold("ownerId", t.Name.Local):
 			val, err := decoder.Value()
 			if err != nil {
@@ -43274,6 +44106,23 @@ func awsEc2query_deserializeDocumentCapacityReservation(v **types.CapacityReserv
 			{
 				xtv := string(val)
 				sv.OwnerId = ptr.String(xtv)
+			}
+
+		case strings.EqualFold("startDate", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				t, err := smithytime.ParseDateTime(xtv)
+				if err != nil {
+					return err
+				}
+				sv.StartDate = ptr.Time(t)
 			}
 
 		case strings.EqualFold("state", t.Name.Local):
@@ -43322,7 +44171,7 @@ func awsEc2query_deserializeDocumentCapacityReservation(v **types.CapacityReserv
 				if err != nil {
 					return err
 				}
-				sv.TotalInstanceCount = int32(i64)
+				sv.TotalInstanceCount = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -44066,7 +44915,7 @@ func awsEc2query_deserializeDocumentClassicLinkDnsSupport(v **types.ClassicLinkD
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.ClassicLinkDnsSupported = xtv
+				sv.ClassicLinkDnsSupported = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("vpcId", t.Name.Local):
@@ -44562,7 +45411,7 @@ func awsEc2query_deserializeDocumentClientConnectResponseOptions(v **types.Clien
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Enabled = xtv
+				sv.Enabled = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("lambdaFunctionArn", t.Name.Local):
@@ -45304,7 +46153,7 @@ func awsEc2query_deserializeDocumentClientVpnEndpoint(v **types.ClientVpnEndpoin
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.SplitTunnel = xtv
+				sv.SplitTunnel = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("status", t.Name.Local):
@@ -45359,7 +46208,7 @@ func awsEc2query_deserializeDocumentClientVpnEndpoint(v **types.ClientVpnEndpoin
 				if err != nil {
 					return err
 				}
-				sv.VpnPort = int32(i64)
+				sv.VpnPort = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("vpnProtocol", t.Name.Local):
@@ -46215,7 +47064,7 @@ func awsEc2query_deserializeDocumentConnectionLogResponseOptions(v **types.Conne
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Enabled = xtv
+				sv.Enabled = ptr.Bool(xtv)
 			}
 
 		default:
@@ -46650,7 +47499,7 @@ func awsEc2query_deserializeDocumentCpuOptions(v **types.CpuOptions, decoder smi
 				if err != nil {
 					return err
 				}
-				sv.CoreCount = int32(i64)
+				sv.CoreCount = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("threadsPerCore", t.Name.Local):
@@ -46667,7 +47516,7 @@ func awsEc2query_deserializeDocumentCpuOptions(v **types.CpuOptions, decoder smi
 				if err != nil {
 					return err
 				}
-				sv.ThreadsPerCore = int32(i64)
+				sv.ThreadsPerCore = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -47764,7 +48613,7 @@ func awsEc2query_deserializeDocumentDeleteLaunchTemplateVersionsResponseErrorIte
 				if err != nil {
 					return err
 				}
-				sv.VersionNumber = i64
+				sv.VersionNumber = ptr.Int64(i64)
 			}
 
 		default:
@@ -47911,7 +48760,7 @@ func awsEc2query_deserializeDocumentDeleteLaunchTemplateVersionsResponseSuccessI
 				if err != nil {
 					return err
 				}
-				sv.VersionNumber = i64
+				sv.VersionNumber = ptr.Int64(i64)
 			}
 
 		default:
@@ -49729,7 +50578,7 @@ func awsEc2query_deserializeDocumentDiskImageDescription(v **types.DiskImageDesc
 				if err != nil {
 					return err
 				}
-				sv.Size = i64
+				sv.Size = ptr.Int64(i64)
 			}
 
 		default:
@@ -49795,7 +50644,7 @@ func awsEc2query_deserializeDocumentDiskImageVolumeDescription(v **types.DiskIma
 				if err != nil {
 					return err
 				}
-				sv.Size = i64
+				sv.Size = ptr.Int64(i64)
 			}
 
 		default:
@@ -50128,7 +50977,7 @@ func awsEc2query_deserializeDocumentEbsBlockDevice(v **types.EbsBlockDevice, dec
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.DeleteOnTermination = xtv
+				sv.DeleteOnTermination = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("encrypted", t.Name.Local):
@@ -50144,7 +50993,7 @@ func awsEc2query_deserializeDocumentEbsBlockDevice(v **types.EbsBlockDevice, dec
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Encrypted = xtv
+				sv.Encrypted = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("iops", t.Name.Local):
@@ -50161,7 +51010,7 @@ func awsEc2query_deserializeDocumentEbsBlockDevice(v **types.EbsBlockDevice, dec
 				if err != nil {
 					return err
 				}
-				sv.Iops = int32(i64)
+				sv.Iops = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("KmsKeyId", t.Name.Local):
@@ -50217,7 +51066,7 @@ func awsEc2query_deserializeDocumentEbsBlockDevice(v **types.EbsBlockDevice, dec
 				if err != nil {
 					return err
 				}
-				sv.Throughput = int32(i64)
+				sv.Throughput = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("volumeSize", t.Name.Local):
@@ -50234,7 +51083,7 @@ func awsEc2query_deserializeDocumentEbsBlockDevice(v **types.EbsBlockDevice, dec
 				if err != nil {
 					return err
 				}
-				sv.VolumeSize = int32(i64)
+				sv.VolumeSize = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("volumeType", t.Name.Local):
@@ -50397,7 +51246,7 @@ func awsEc2query_deserializeDocumentEbsInstanceBlockDevice(v **types.EbsInstance
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.DeleteOnTermination = xtv
+				sv.DeleteOnTermination = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("status", t.Name.Local):
@@ -50562,6 +51411,59 @@ func awsEc2query_deserializeDocumentEbsOptimizedInfo(v **types.EbsOptimizedInfo,
 					return err
 				}
 				sv.MaximumThroughputInMBps = ptr.Float64(f64)
+			}
+
+		default:
+			// Do nothing and ignore the unexpected tag element
+			err = decoder.Decoder.Skip()
+			if err != nil {
+				return err
+			}
+
+		}
+		decoder = originalDecoder
+	}
+	*v = sv
+	return nil
+}
+
+func awsEc2query_deserializeDocumentEfaInfo(v **types.EfaInfo, decoder smithyxml.NodeDecoder) error {
+	if v == nil {
+		return fmt.Errorf("unexpected nil of type %T", v)
+	}
+	var sv *types.EfaInfo
+	if *v == nil {
+		sv = &types.EfaInfo{}
+	} else {
+		sv = *v
+	}
+
+	for {
+		t, done, err := decoder.Token()
+		if err != nil {
+			return err
+		}
+		if done {
+			break
+		}
+		originalDecoder := decoder
+		decoder = smithyxml.WrapNodeDecoder(originalDecoder.Decoder, t)
+		switch {
+		case strings.EqualFold("maximumEfaInterfaces", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				i64, err := strconv.ParseInt(xtv, 10, 64)
+				if err != nil {
+					return err
+				}
+				sv.MaximumEfaInterfaces = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -51980,7 +52882,7 @@ func awsEc2query_deserializeDocumentEnclaveOptions(v **types.EnclaveOptions, dec
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Enabled = xtv
+				sv.Enabled = ptr.Bool(xtv)
 			}
 
 		default:
@@ -52380,7 +53282,7 @@ func awsEc2query_deserializeDocumentExplanation(v **types.Explanation, decoder s
 				if err != nil {
 					return err
 				}
-				sv.LoadBalancerListenerPort = int32(i64)
+				sv.LoadBalancerListenerPort = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("loadBalancerTarget", t.Name.Local):
@@ -52415,7 +53317,7 @@ func awsEc2query_deserializeDocumentExplanation(v **types.Explanation, decoder s
 				if err != nil {
 					return err
 				}
-				sv.LoadBalancerTargetPort = int32(i64)
+				sv.LoadBalancerTargetPort = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("missingComponent", t.Name.Local):
@@ -52470,7 +53372,7 @@ func awsEc2query_deserializeDocumentExplanation(v **types.Explanation, decoder s
 				if err != nil {
 					return err
 				}
-				sv.Port = int32(i64)
+				sv.Port = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("portRangeSet", t.Name.Local):
@@ -53491,7 +54393,7 @@ func awsEc2query_deserializeDocumentFleetData(v **types.FleetData, decoder smith
 				if err != nil {
 					return err
 				}
-				sv.FulfilledCapacity = f64
+				sv.FulfilledCapacity = ptr.Float64(f64)
 			}
 
 		case strings.EqualFold("fulfilledOnDemandCapacity", t.Name.Local):
@@ -53508,7 +54410,7 @@ func awsEc2query_deserializeDocumentFleetData(v **types.FleetData, decoder smith
 				if err != nil {
 					return err
 				}
-				sv.FulfilledOnDemandCapacity = f64
+				sv.FulfilledOnDemandCapacity = ptr.Float64(f64)
 			}
 
 		case strings.EqualFold("fleetInstanceSet", t.Name.Local):
@@ -53542,7 +54444,7 @@ func awsEc2query_deserializeDocumentFleetData(v **types.FleetData, decoder smith
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.ReplaceUnhealthyInstances = xtv
+				sv.ReplaceUnhealthyInstances = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("spotOptions", t.Name.Local):
@@ -53576,7 +54478,7 @@ func awsEc2query_deserializeDocumentFleetData(v **types.FleetData, decoder smith
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.TerminateInstancesWithExpiration = xtv
+				sv.TerminateInstancesWithExpiration = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("type", t.Name.Local):
@@ -53837,7 +54739,7 @@ func awsEc2query_deserializeDocumentFleetLaunchTemplateOverrides(v **types.Fleet
 				if err != nil {
 					return err
 				}
-				sv.Priority = f64
+				sv.Priority = ptr.Float64(f64)
 			}
 
 		case strings.EqualFold("subnetId", t.Name.Local):
@@ -53867,7 +54769,7 @@ func awsEc2query_deserializeDocumentFleetLaunchTemplateOverrides(v **types.Fleet
 				if err != nil {
 					return err
 				}
-				sv.WeightedCapacity = f64
+				sv.WeightedCapacity = ptr.Float64(f64)
 			}
 
 		default:
@@ -54356,7 +55258,7 @@ func awsEc2query_deserializeDocumentFlowLog(v **types.FlowLog, decoder smithyxml
 				if err != nil {
 					return err
 				}
-				sv.MaxAggregationInterval = int32(i64)
+				sv.MaxAggregationInterval = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("resourceId", t.Name.Local):
@@ -54731,7 +55633,7 @@ func awsEc2query_deserializeDocumentFpgaImage(v **types.FpgaImage, decoder smith
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.DataRetentionSupport = xtv
+				sv.DataRetentionSupport = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("description", t.Name.Local):
@@ -54837,7 +55739,7 @@ func awsEc2query_deserializeDocumentFpgaImage(v **types.FpgaImage, decoder smith
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Public = xtv
+				sv.Public = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("shellVersion", t.Name.Local):
@@ -55750,7 +56652,7 @@ func awsEc2query_deserializeDocumentHibernationOptions(v **types.HibernationOpti
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Configured = xtv
+				sv.Configured = ptr.Bool(xtv)
 			}
 
 		default:
@@ -56221,7 +57123,7 @@ func awsEc2query_deserializeDocumentHost(v **types.Host, decoder smithyxml.NodeD
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.MemberOfServiceLinkedResourceGroup = xtv
+				sv.MemberOfServiceLinkedResourceGroup = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("ownerId", t.Name.Local):
@@ -56547,7 +57449,7 @@ func awsEc2query_deserializeDocumentHostOffering(v **types.HostOffering, decoder
 				if err != nil {
 					return err
 				}
-				sv.Duration = int32(i64)
+				sv.Duration = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("hourlyPrice", t.Name.Local):
@@ -56733,7 +57635,7 @@ func awsEc2query_deserializeDocumentHostProperties(v **types.HostProperties, dec
 				if err != nil {
 					return err
 				}
-				sv.Cores = int32(i64)
+				sv.Cores = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("instanceFamily", t.Name.Local):
@@ -56776,7 +57678,7 @@ func awsEc2query_deserializeDocumentHostProperties(v **types.HostProperties, dec
 				if err != nil {
 					return err
 				}
-				sv.Sockets = int32(i64)
+				sv.Sockets = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("totalVCpus", t.Name.Local):
@@ -56793,7 +57695,7 @@ func awsEc2query_deserializeDocumentHostProperties(v **types.HostProperties, dec
 				if err != nil {
 					return err
 				}
-				sv.TotalVCpus = int32(i64)
+				sv.TotalVCpus = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -56846,7 +57748,7 @@ func awsEc2query_deserializeDocumentHostReservation(v **types.HostReservation, d
 				if err != nil {
 					return err
 				}
-				sv.Count = int32(i64)
+				sv.Count = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("currencyCode", t.Name.Local):
@@ -56876,7 +57778,7 @@ func awsEc2query_deserializeDocumentHostReservation(v **types.HostReservation, d
 				if err != nil {
 					return err
 				}
-				sv.Duration = int32(i64)
+				sv.Duration = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("end", t.Name.Local):
@@ -57424,7 +58326,7 @@ func awsEc2query_deserializeDocumentIcmpTypeCode(v **types.IcmpTypeCode, decoder
 				if err != nil {
 					return err
 				}
-				sv.Code = int32(i64)
+				sv.Code = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("type", t.Name.Local):
@@ -57441,7 +58343,7 @@ func awsEc2query_deserializeDocumentIcmpTypeCode(v **types.IcmpTypeCode, decoder
 				if err != nil {
 					return err
 				}
-				sv.Type = int32(i64)
+				sv.Type = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -57523,7 +58425,7 @@ func awsEc2query_deserializeDocumentIdFormat(v **types.IdFormat, decoder smithyx
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.UseLongIds = xtv
+				sv.UseLongIds = ptr.Bool(xtv)
 			}
 
 		default:
@@ -57818,7 +58720,7 @@ func awsEc2query_deserializeDocumentImage(v **types.Image, decoder smithyxml.Nod
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.EnaSupport = xtv
+				sv.EnaSupport = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("hypervisor", t.Name.Local):
@@ -57970,7 +58872,7 @@ func awsEc2query_deserializeDocumentImage(v **types.Image, decoder smithyxml.Nod
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Public = xtv
+				sv.Public = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("ramdiskId", t.Name.Local):
@@ -58336,7 +59238,7 @@ func awsEc2query_deserializeDocumentImportImageTask(v **types.ImportImageTask, d
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Encrypted = xtv
+				sv.Encrypted = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("hypervisor", t.Name.Local):
@@ -58686,7 +59588,7 @@ func awsEc2query_deserializeDocumentImportInstanceVolumeDetailItem(v **types.Imp
 				if err != nil {
 					return err
 				}
-				sv.BytesConverted = i64
+				sv.BytesConverted = ptr.Int64(i64)
 			}
 
 		case strings.EqualFold("description", t.Name.Local):
@@ -59013,7 +59915,7 @@ func awsEc2query_deserializeDocumentImportVolumeTaskDetails(v **types.ImportVolu
 				if err != nil {
 					return err
 				}
-				sv.BytesConverted = i64
+				sv.BytesConverted = ptr.Int64(i64)
 			}
 
 		case strings.EqualFold("description", t.Name.Local):
@@ -59360,7 +60262,7 @@ func awsEc2query_deserializeDocumentInstance(v **types.Instance, decoder smithyx
 				if err != nil {
 					return err
 				}
-				sv.AmiLaunchIndex = int32(i64)
+				sv.AmiLaunchIndex = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("architecture", t.Name.Local):
@@ -59446,7 +60348,7 @@ func awsEc2query_deserializeDocumentInstance(v **types.Instance, decoder smithyx
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.EbsOptimized = xtv
+				sv.EbsOptimized = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("elasticGpuAssociationSet", t.Name.Local):
@@ -59474,7 +60376,7 @@ func awsEc2query_deserializeDocumentInstance(v **types.Instance, decoder smithyx
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.EnaSupport = xtv
+				sv.EnaSupport = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("enclaveOptions", t.Name.Local):
@@ -59775,7 +60677,7 @@ func awsEc2query_deserializeDocumentInstance(v **types.Instance, decoder smithyx
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.SourceDestCheck = xtv
+				sv.SourceDestCheck = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("spotInstanceRequestId", t.Name.Local):
@@ -60047,7 +60949,7 @@ func awsEc2query_deserializeDocumentInstanceCapacity(v **types.InstanceCapacity,
 				if err != nil {
 					return err
 				}
-				sv.AvailableCapacity = int32(i64)
+				sv.AvailableCapacity = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("instanceType", t.Name.Local):
@@ -60077,7 +60979,7 @@ func awsEc2query_deserializeDocumentInstanceCapacity(v **types.InstanceCapacity,
 				if err != nil {
 					return err
 				}
-				sv.TotalCapacity = int32(i64)
+				sv.TotalCapacity = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -60130,7 +61032,7 @@ func awsEc2query_deserializeDocumentInstanceCount(v **types.InstanceCount, decod
 				if err != nil {
 					return err
 				}
-				sv.InstanceCount = int32(i64)
+				sv.InstanceCount = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("state", t.Name.Local):
@@ -60876,7 +61778,7 @@ func awsEc2query_deserializeDocumentInstanceMetadataOptionsResponse(v **types.In
 				if err != nil {
 					return err
 				}
-				sv.HttpPutResponseHopLimit = int32(i64)
+				sv.HttpPutResponseHopLimit = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("httpTokens", t.Name.Local):
@@ -61198,7 +62100,7 @@ func awsEc2query_deserializeDocumentInstanceNetworkInterface(v **types.InstanceN
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.SourceDestCheck = xtv
+				sv.SourceDestCheck = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("status", t.Name.Local):
@@ -61407,7 +62309,7 @@ func awsEc2query_deserializeDocumentInstanceNetworkInterfaceAttachment(v **types
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.DeleteOnTermination = xtv
+				sv.DeleteOnTermination = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("deviceIndex", t.Name.Local):
@@ -61424,7 +62326,7 @@ func awsEc2query_deserializeDocumentInstanceNetworkInterfaceAttachment(v **types
 				if err != nil {
 					return err
 				}
-				sv.DeviceIndex = int32(i64)
+				sv.DeviceIndex = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("networkCardIndex", t.Name.Local):
@@ -61441,7 +62343,7 @@ func awsEc2query_deserializeDocumentInstanceNetworkInterfaceAttachment(v **types
 				if err != nil {
 					return err
 				}
-				sv.NetworkCardIndex = int32(i64)
+				sv.NetworkCardIndex = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("status", t.Name.Local):
@@ -61574,7 +62476,7 @@ func awsEc2query_deserializeDocumentInstanceNetworkInterfaceSpecification(v **ty
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.AssociateCarrierIpAddress = xtv
+				sv.AssociateCarrierIpAddress = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("associatePublicIpAddress", t.Name.Local):
@@ -61590,7 +62492,7 @@ func awsEc2query_deserializeDocumentInstanceNetworkInterfaceSpecification(v **ty
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.AssociatePublicIpAddress = xtv
+				sv.AssociatePublicIpAddress = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("deleteOnTermination", t.Name.Local):
@@ -61606,7 +62508,7 @@ func awsEc2query_deserializeDocumentInstanceNetworkInterfaceSpecification(v **ty
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.DeleteOnTermination = xtv
+				sv.DeleteOnTermination = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("description", t.Name.Local):
@@ -61636,7 +62538,7 @@ func awsEc2query_deserializeDocumentInstanceNetworkInterfaceSpecification(v **ty
 				if err != nil {
 					return err
 				}
-				sv.DeviceIndex = int32(i64)
+				sv.DeviceIndex = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("SecurityGroupId", t.Name.Local):
@@ -61672,7 +62574,7 @@ func awsEc2query_deserializeDocumentInstanceNetworkInterfaceSpecification(v **ty
 				if err != nil {
 					return err
 				}
-				sv.Ipv6AddressCount = int32(i64)
+				sv.Ipv6AddressCount = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("ipv6AddressesSet", t.Name.Local):
@@ -61695,7 +62597,7 @@ func awsEc2query_deserializeDocumentInstanceNetworkInterfaceSpecification(v **ty
 				if err != nil {
 					return err
 				}
-				sv.NetworkCardIndex = int32(i64)
+				sv.NetworkCardIndex = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("networkInterfaceId", t.Name.Local):
@@ -61744,7 +62646,7 @@ func awsEc2query_deserializeDocumentInstanceNetworkInterfaceSpecification(v **ty
 				if err != nil {
 					return err
 				}
-				sv.SecondaryPrivateIpAddressCount = int32(i64)
+				sv.SecondaryPrivateIpAddressCount = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("subnetId", t.Name.Local):
@@ -61883,7 +62785,7 @@ func awsEc2query_deserializeDocumentInstancePrivateIpAddress(v **types.InstanceP
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Primary = xtv
+				sv.Primary = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("privateDnsName", t.Name.Local):
@@ -62030,7 +62932,7 @@ func awsEc2query_deserializeDocumentInstanceState(v **types.InstanceState, decod
 				if err != nil {
 					return err
 				}
-				sv.Code = int32(i64)
+				sv.Code = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("name", t.Name.Local):
@@ -62939,7 +63841,7 @@ func awsEc2query_deserializeDocumentInstanceTagNotificationAttribute(v **types.I
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.IncludeAllTagsOfInstance = xtv
+				sv.IncludeAllTagsOfInstance = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("instanceTagKeySet", t.Name.Local):
@@ -63496,7 +64398,7 @@ func awsEc2query_deserializeDocumentInstanceUsage(v **types.InstanceUsage, decod
 				if err != nil {
 					return err
 				}
-				sv.UsedInstanceCount = int32(i64)
+				sv.UsedInstanceCount = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -63969,7 +64871,7 @@ func awsEc2query_deserializeDocumentIpPermission(v **types.IpPermission, decoder
 				if err != nil {
 					return err
 				}
-				sv.FromPort = int32(i64)
+				sv.FromPort = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("ipProtocol", t.Name.Local):
@@ -64017,7 +64919,7 @@ func awsEc2query_deserializeDocumentIpPermission(v **types.IpPermission, decoder
 				if err != nil {
 					return err
 				}
-				sv.ToPort = int32(i64)
+				sv.ToPort = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("groups", t.Name.Local):
@@ -65312,7 +66214,7 @@ func awsEc2query_deserializeDocumentLaunchSpecification(v **types.LaunchSpecific
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.EbsOptimized = xtv
+				sv.EbsOptimized = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("iamInstanceProfile", t.Name.Local):
@@ -65584,7 +66486,7 @@ func awsEc2query_deserializeDocumentLaunchTemplate(v **types.LaunchTemplate, dec
 				if err != nil {
 					return err
 				}
-				sv.DefaultVersionNumber = i64
+				sv.DefaultVersionNumber = ptr.Int64(i64)
 			}
 
 		case strings.EqualFold("latestVersionNumber", t.Name.Local):
@@ -65601,7 +66503,7 @@ func awsEc2query_deserializeDocumentLaunchTemplate(v **types.LaunchTemplate, dec
 				if err != nil {
 					return err
 				}
-				sv.LatestVersionNumber = i64
+				sv.LatestVersionNumber = ptr.Int64(i64)
 			}
 
 		case strings.EqualFold("launchTemplateId", t.Name.Local):
@@ -66054,7 +66956,7 @@ func awsEc2query_deserializeDocumentLaunchTemplateCpuOptions(v **types.LaunchTem
 				if err != nil {
 					return err
 				}
-				sv.CoreCount = int32(i64)
+				sv.CoreCount = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("threadsPerCore", t.Name.Local):
@@ -66071,7 +66973,7 @@ func awsEc2query_deserializeDocumentLaunchTemplateCpuOptions(v **types.LaunchTem
 				if err != nil {
 					return err
 				}
-				sv.ThreadsPerCore = int32(i64)
+				sv.ThreadsPerCore = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -66123,7 +67025,7 @@ func awsEc2query_deserializeDocumentLaunchTemplateEbsBlockDevice(v **types.Launc
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.DeleteOnTermination = xtv
+				sv.DeleteOnTermination = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("encrypted", t.Name.Local):
@@ -66139,7 +67041,7 @@ func awsEc2query_deserializeDocumentLaunchTemplateEbsBlockDevice(v **types.Launc
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Encrypted = xtv
+				sv.Encrypted = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("iops", t.Name.Local):
@@ -66156,7 +67058,7 @@ func awsEc2query_deserializeDocumentLaunchTemplateEbsBlockDevice(v **types.Launc
 				if err != nil {
 					return err
 				}
-				sv.Iops = int32(i64)
+				sv.Iops = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("kmsKeyId", t.Name.Local):
@@ -66199,7 +67101,7 @@ func awsEc2query_deserializeDocumentLaunchTemplateEbsBlockDevice(v **types.Launc
 				if err != nil {
 					return err
 				}
-				sv.Throughput = int32(i64)
+				sv.Throughput = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("volumeSize", t.Name.Local):
@@ -66216,7 +67118,7 @@ func awsEc2query_deserializeDocumentLaunchTemplateEbsBlockDevice(v **types.Launc
 				if err != nil {
 					return err
 				}
-				sv.VolumeSize = int32(i64)
+				sv.VolumeSize = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("volumeType", t.Name.Local):
@@ -66282,7 +67184,7 @@ func awsEc2query_deserializeDocumentLaunchTemplateElasticInferenceAcceleratorRes
 				if err != nil {
 					return err
 				}
-				sv.Count = int32(i64)
+				sv.Count = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("type", t.Name.Local):
@@ -66415,7 +67317,7 @@ func awsEc2query_deserializeDocumentLaunchTemplateEnclaveOptions(v **types.Launc
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Enabled = xtv
+				sv.Enabled = ptr.Bool(xtv)
 			}
 
 		default:
@@ -66467,7 +67369,7 @@ func awsEc2query_deserializeDocumentLaunchTemplateHibernationOptions(v **types.L
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Configured = xtv
+				sv.Configured = ptr.Bool(xtv)
 			}
 
 		default:
@@ -66650,7 +67552,7 @@ func awsEc2query_deserializeDocumentLaunchTemplateInstanceMetadataOptions(v **ty
 				if err != nil {
 					return err
 				}
-				sv.HttpPutResponseHopLimit = int32(i64)
+				sv.HttpPutResponseHopLimit = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("httpTokens", t.Name.Local):
@@ -66728,7 +67630,7 @@ func awsEc2query_deserializeDocumentLaunchTemplateInstanceNetworkInterfaceSpecif
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.AssociateCarrierIpAddress = xtv
+				sv.AssociateCarrierIpAddress = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("associatePublicIpAddress", t.Name.Local):
@@ -66744,7 +67646,7 @@ func awsEc2query_deserializeDocumentLaunchTemplateInstanceNetworkInterfaceSpecif
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.AssociatePublicIpAddress = xtv
+				sv.AssociatePublicIpAddress = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("deleteOnTermination", t.Name.Local):
@@ -66760,7 +67662,7 @@ func awsEc2query_deserializeDocumentLaunchTemplateInstanceNetworkInterfaceSpecif
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.DeleteOnTermination = xtv
+				sv.DeleteOnTermination = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("description", t.Name.Local):
@@ -66790,7 +67692,7 @@ func awsEc2query_deserializeDocumentLaunchTemplateInstanceNetworkInterfaceSpecif
 				if err != nil {
 					return err
 				}
-				sv.DeviceIndex = int32(i64)
+				sv.DeviceIndex = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("groupSet", t.Name.Local):
@@ -66826,7 +67728,7 @@ func awsEc2query_deserializeDocumentLaunchTemplateInstanceNetworkInterfaceSpecif
 				if err != nil {
 					return err
 				}
-				sv.Ipv6AddressCount = int32(i64)
+				sv.Ipv6AddressCount = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("ipv6AddressesSet", t.Name.Local):
@@ -66849,7 +67751,7 @@ func awsEc2query_deserializeDocumentLaunchTemplateInstanceNetworkInterfaceSpecif
 				if err != nil {
 					return err
 				}
-				sv.NetworkCardIndex = int32(i64)
+				sv.NetworkCardIndex = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("networkInterfaceId", t.Name.Local):
@@ -66898,7 +67800,7 @@ func awsEc2query_deserializeDocumentLaunchTemplateInstanceNetworkInterfaceSpecif
 				if err != nil {
 					return err
 				}
-				sv.SecondaryPrivateIpAddressCount = int32(i64)
+				sv.SecondaryPrivateIpAddressCount = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("subnetId", t.Name.Local):
@@ -67175,7 +68077,7 @@ func awsEc2query_deserializeDocumentLaunchTemplateOverrides(v **types.LaunchTemp
 				if err != nil {
 					return err
 				}
-				sv.Priority = f64
+				sv.Priority = ptr.Float64(f64)
 			}
 
 		case strings.EqualFold("spotPrice", t.Name.Local):
@@ -67218,7 +68120,7 @@ func awsEc2query_deserializeDocumentLaunchTemplateOverrides(v **types.LaunchTemp
 				if err != nil {
 					return err
 				}
-				sv.WeightedCapacity = f64
+				sv.WeightedCapacity = ptr.Float64(f64)
 			}
 
 		default:
@@ -67404,7 +68306,7 @@ func awsEc2query_deserializeDocumentLaunchTemplatePlacement(v **types.LaunchTemp
 				if err != nil {
 					return err
 				}
-				sv.PartitionNumber = int32(i64)
+				sv.PartitionNumber = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("spreadDomain", t.Name.Local):
@@ -67550,7 +68452,7 @@ func awsEc2query_deserializeDocumentLaunchTemplatesMonitoring(v **types.LaunchTe
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Enabled = xtv
+				sv.Enabled = ptr.Bool(xtv)
 			}
 
 		default:
@@ -67603,7 +68505,7 @@ func awsEc2query_deserializeDocumentLaunchTemplateSpotMarketOptions(v **types.La
 				if err != nil {
 					return err
 				}
-				sv.BlockDurationMinutes = int32(i64)
+				sv.BlockDurationMinutes = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("instanceInterruptionBehavior", t.Name.Local):
@@ -67864,7 +68766,7 @@ func awsEc2query_deserializeDocumentLaunchTemplateVersion(v **types.LaunchTempla
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.DefaultVersion = xtv
+				sv.DefaultVersion = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("launchTemplateData", t.Name.Local):
@@ -67926,7 +68828,7 @@ func awsEc2query_deserializeDocumentLaunchTemplateVersion(v **types.LaunchTempla
 				if err != nil {
 					return err
 				}
-				sv.VersionNumber = i64
+				sv.VersionNumber = ptr.Int64(i64)
 			}
 
 		default:
@@ -69302,7 +70204,7 @@ func awsEc2query_deserializeDocumentLocalGatewayVirtualInterface(v **types.Local
 				if err != nil {
 					return err
 				}
-				sv.LocalBgpAsn = int32(i64)
+				sv.LocalBgpAsn = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("localGatewayId", t.Name.Local):
@@ -69371,7 +70273,7 @@ func awsEc2query_deserializeDocumentLocalGatewayVirtualInterface(v **types.Local
 				if err != nil {
 					return err
 				}
-				sv.PeerBgpAsn = int32(i64)
+				sv.PeerBgpAsn = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("tagSet", t.Name.Local):
@@ -69394,7 +70296,7 @@ func awsEc2query_deserializeDocumentLocalGatewayVirtualInterface(v **types.Local
 				if err != nil {
 					return err
 				}
-				sv.Vlan = int32(i64)
+				sv.Vlan = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -69763,7 +70665,7 @@ func awsEc2query_deserializeDocumentManagedPrefixList(v **types.ManagedPrefixLis
 				if err != nil {
 					return err
 				}
-				sv.MaxEntries = int32(i64)
+				sv.MaxEntries = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("ownerId", t.Name.Local):
@@ -69864,7 +70766,7 @@ func awsEc2query_deserializeDocumentManagedPrefixList(v **types.ManagedPrefixLis
 				if err != nil {
 					return err
 				}
-				sv.Version = i64
+				sv.Version = ptr.Int64(i64)
 			}
 
 		default:
@@ -70618,7 +71520,7 @@ func awsEc2query_deserializeDocumentNetworkAcl(v **types.NetworkAcl, decoder smi
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.IsDefault = xtv
+				sv.IsDefault = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("networkAclId", t.Name.Local):
@@ -70871,7 +71773,7 @@ func awsEc2query_deserializeDocumentNetworkAclEntry(v **types.NetworkAclEntry, d
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Egress = xtv
+				sv.Egress = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("icmpTypeCode", t.Name.Local):
@@ -70939,7 +71841,7 @@ func awsEc2query_deserializeDocumentNetworkAclEntry(v **types.NetworkAclEntry, d
 				if err != nil {
 					return err
 				}
-				sv.RuleNumber = int32(i64)
+				sv.RuleNumber = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -71282,6 +72184,12 @@ func awsEc2query_deserializeDocumentNetworkInfo(v **types.NetworkInfo, decoder s
 				sv.DefaultNetworkCardIndex = ptr.Int32(int32(i64))
 			}
 
+		case strings.EqualFold("efaInfo", t.Name.Local):
+			nodeDecoder := smithyxml.WrapNodeDecoder(decoder.Decoder, t)
+			if err := awsEc2query_deserializeDocumentEfaInfo(&sv.EfaInfo, nodeDecoder); err != nil {
+				return err
+			}
+
 		case strings.EqualFold("efaSupported", t.Name.Local):
 			val, err := decoder.Value()
 			if err != nil {
@@ -71526,7 +72434,7 @@ func awsEc2query_deserializeDocumentNetworkInsightsAnalysis(v **types.NetworkIns
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.NetworkPathFound = xtv
+				sv.NetworkPathFound = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("returnPathComponentSet", t.Name.Local):
@@ -71745,7 +72653,7 @@ func awsEc2query_deserializeDocumentNetworkInsightsPath(v **types.NetworkInsight
 				if err != nil {
 					return err
 				}
-				sv.DestinationPort = int32(i64)
+				sv.DestinationPort = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("networkInsightsPathArn", t.Name.Local):
@@ -72096,7 +73004,7 @@ func awsEc2query_deserializeDocumentNetworkInterface(v **types.NetworkInterface,
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.RequesterManaged = xtv
+				sv.RequesterManaged = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("sourceDestCheck", t.Name.Local):
@@ -72112,7 +73020,7 @@ func awsEc2query_deserializeDocumentNetworkInterface(v **types.NetworkInterface,
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.SourceDestCheck = xtv
+				sv.SourceDestCheck = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("status", t.Name.Local):
@@ -72366,7 +73274,7 @@ func awsEc2query_deserializeDocumentNetworkInterfaceAttachment(v **types.Network
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.DeleteOnTermination = xtv
+				sv.DeleteOnTermination = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("deviceIndex", t.Name.Local):
@@ -72383,7 +73291,7 @@ func awsEc2query_deserializeDocumentNetworkInterfaceAttachment(v **types.Network
 				if err != nil {
 					return err
 				}
-				sv.DeviceIndex = int32(i64)
+				sv.DeviceIndex = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("instanceId", t.Name.Local):
@@ -72426,7 +73334,7 @@ func awsEc2query_deserializeDocumentNetworkInterfaceAttachment(v **types.Network
 				if err != nil {
 					return err
 				}
-				sv.NetworkCardIndex = int32(i64)
+				sv.NetworkCardIndex = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("status", t.Name.Local):
@@ -72919,7 +73827,7 @@ func awsEc2query_deserializeDocumentNetworkInterfacePrivateIpAddress(v **types.N
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Primary = xtv
+				sv.Primary = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("privateDnsName", t.Name.Local):
@@ -73186,7 +74094,7 @@ func awsEc2query_deserializeDocumentOnDemandOptions(v **types.OnDemandOptions, d
 				if err != nil {
 					return err
 				}
-				sv.MinTargetCapacity = int32(i64)
+				sv.MinTargetCapacity = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("singleAvailabilityZone", t.Name.Local):
@@ -73202,7 +74110,7 @@ func awsEc2query_deserializeDocumentOnDemandOptions(v **types.OnDemandOptions, d
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.SingleAvailabilityZone = xtv
+				sv.SingleAvailabilityZone = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("singleInstanceType", t.Name.Local):
@@ -73218,7 +74126,7 @@ func awsEc2query_deserializeDocumentOnDemandOptions(v **types.OnDemandOptions, d
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.SingleInstanceType = xtv
+				sv.SingleInstanceType = ptr.Bool(xtv)
 			}
 
 		default:
@@ -73313,7 +74221,7 @@ func awsEc2query_deserializeDocumentPathComponent(v **types.PathComponent, decod
 				if err != nil {
 					return err
 				}
-				sv.SequenceNumber = int32(i64)
+				sv.SequenceNumber = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("sourceVpc", t.Name.Local):
@@ -73601,7 +74509,7 @@ func awsEc2query_deserializeDocumentPeeringConnectionOptions(v **types.PeeringCo
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.AllowDnsResolutionFromRemoteVpc = xtv
+				sv.AllowDnsResolutionFromRemoteVpc = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("allowEgressFromLocalClassicLinkToRemoteVpc", t.Name.Local):
@@ -73617,7 +74525,7 @@ func awsEc2query_deserializeDocumentPeeringConnectionOptions(v **types.PeeringCo
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.AllowEgressFromLocalClassicLinkToRemoteVpc = xtv
+				sv.AllowEgressFromLocalClassicLinkToRemoteVpc = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("allowEgressFromLocalVpcToRemoteClassicLink", t.Name.Local):
@@ -73633,7 +74541,7 @@ func awsEc2query_deserializeDocumentPeeringConnectionOptions(v **types.PeeringCo
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.AllowEgressFromLocalVpcToRemoteClassicLink = xtv
+				sv.AllowEgressFromLocalVpcToRemoteClassicLink = ptr.Bool(xtv)
 			}
 
 		default:
@@ -73829,7 +74737,7 @@ func awsEc2query_deserializeDocumentPhase1DHGroupNumbersListValue(v **types.Phas
 				if err != nil {
 					return err
 				}
-				sv.Value = int32(i64)
+				sv.Value = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -74184,7 +75092,7 @@ func awsEc2query_deserializeDocumentPhase2DHGroupNumbersListValue(v **types.Phas
 				if err != nil {
 					return err
 				}
-				sv.Value = int32(i64)
+				sv.Value = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -74536,7 +75444,7 @@ func awsEc2query_deserializeDocumentPlacement(v **types.Placement, decoder smith
 				if err != nil {
 					return err
 				}
-				sv.PartitionNumber = int32(i64)
+				sv.PartitionNumber = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("spreadDomain", t.Name.Local):
@@ -74641,7 +75549,7 @@ func awsEc2query_deserializeDocumentPlacementGroup(v **types.PlacementGroup, dec
 				if err != nil {
 					return err
 				}
-				sv.PartitionCount = int32(i64)
+				sv.PartitionCount = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("state", t.Name.Local):
@@ -75082,7 +75990,7 @@ func awsEc2query_deserializeDocumentPortRange(v **types.PortRange, decoder smith
 				if err != nil {
 					return err
 				}
-				sv.From = int32(i64)
+				sv.From = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("to", t.Name.Local):
@@ -75099,7 +76007,7 @@ func awsEc2query_deserializeDocumentPortRange(v **types.PortRange, decoder smith
 				if err != nil {
 					return err
 				}
-				sv.To = int32(i64)
+				sv.To = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -75825,7 +76733,7 @@ func awsEc2query_deserializeDocumentPriceSchedule(v **types.PriceSchedule, decod
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Active = xtv
+				sv.Active = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("currencyCode", t.Name.Local):
@@ -75855,7 +76763,7 @@ func awsEc2query_deserializeDocumentPriceSchedule(v **types.PriceSchedule, decod
 				if err != nil {
 					return err
 				}
-				sv.Price = f64
+				sv.Price = ptr.Float64(f64)
 			}
 
 		case strings.EqualFold("term", t.Name.Local):
@@ -75872,7 +76780,7 @@ func awsEc2query_deserializeDocumentPriceSchedule(v **types.PriceSchedule, decod
 				if err != nil {
 					return err
 				}
-				sv.Term = i64
+				sv.Term = ptr.Int64(i64)
 			}
 
 		default:
@@ -75993,7 +76901,7 @@ func awsEc2query_deserializeDocumentPricingDetail(v **types.PricingDetail, decod
 				if err != nil {
 					return err
 				}
-				sv.Count = int32(i64)
+				sv.Count = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("price", t.Name.Local):
@@ -76010,7 +76918,7 @@ func awsEc2query_deserializeDocumentPricingDetail(v **types.PricingDetail, decod
 				if err != nil {
 					return err
 				}
-				sv.Price = f64
+				sv.Price = ptr.Float64(f64)
 			}
 
 		default:
@@ -76458,7 +77366,7 @@ func awsEc2query_deserializeDocumentPrivateIpAddressSpecification(v **types.Priv
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Primary = xtv
+				sv.Primary = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("privateIpAddress", t.Name.Local):
@@ -77133,7 +78041,7 @@ func awsEc2query_deserializeDocumentPublicIpv4Pool(v **types.PublicIpv4Pool, dec
 				if err != nil {
 					return err
 				}
-				sv.TotalAddressCount = int32(i64)
+				sv.TotalAddressCount = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("totalAvailableAddressCount", t.Name.Local):
@@ -77150,7 +78058,7 @@ func awsEc2query_deserializeDocumentPublicIpv4Pool(v **types.PublicIpv4Pool, dec
 				if err != nil {
 					return err
 				}
-				sv.TotalAvailableAddressCount = int32(i64)
+				sv.TotalAvailableAddressCount = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -77203,7 +78111,7 @@ func awsEc2query_deserializeDocumentPublicIpv4PoolRange(v **types.PublicIpv4Pool
 				if err != nil {
 					return err
 				}
-				sv.AddressCount = int32(i64)
+				sv.AddressCount = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("availableAddressCount", t.Name.Local):
@@ -77220,7 +78128,7 @@ func awsEc2query_deserializeDocumentPublicIpv4PoolRange(v **types.PublicIpv4Pool
 				if err != nil {
 					return err
 				}
-				sv.AvailableAddressCount = int32(i64)
+				sv.AvailableAddressCount = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("firstAddress", t.Name.Local):
@@ -77448,7 +78356,7 @@ func awsEc2query_deserializeDocumentPurchase(v **types.Purchase, decoder smithyx
 				if err != nil {
 					return err
 				}
-				sv.Duration = int32(i64)
+				sv.Duration = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("hostIdSet", t.Name.Local):
@@ -77708,7 +78616,7 @@ func awsEc2query_deserializeDocumentRecurringCharge(v **types.RecurringCharge, d
 				if err != nil {
 					return err
 				}
-				sv.Amount = f64
+				sv.Amount = ptr.Float64(f64)
 			}
 
 		case strings.EqualFold("frequency", t.Name.Local):
@@ -77941,6 +78849,181 @@ func awsEc2query_deserializeDocumentRegionListUnwrapped(v *[]types.Region, decod
 		nodeDecoder := smithyxml.WrapNodeDecoder(decoder.Decoder, t)
 		destAddr := &mv
 		if err := awsEc2query_deserializeDocumentRegion(&destAddr, nodeDecoder); err != nil {
+			return err
+		}
+		mv = *destAddr
+		sv = append(sv, mv)
+	}
+	*v = sv
+	return nil
+}
+func awsEc2query_deserializeDocumentReplaceRootVolumeTask(v **types.ReplaceRootVolumeTask, decoder smithyxml.NodeDecoder) error {
+	if v == nil {
+		return fmt.Errorf("unexpected nil of type %T", v)
+	}
+	var sv *types.ReplaceRootVolumeTask
+	if *v == nil {
+		sv = &types.ReplaceRootVolumeTask{}
+	} else {
+		sv = *v
+	}
+
+	for {
+		t, done, err := decoder.Token()
+		if err != nil {
+			return err
+		}
+		if done {
+			break
+		}
+		originalDecoder := decoder
+		decoder = smithyxml.WrapNodeDecoder(originalDecoder.Decoder, t)
+		switch {
+		case strings.EqualFold("completeTime", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				sv.CompleteTime = ptr.String(xtv)
+			}
+
+		case strings.EqualFold("instanceId", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				sv.InstanceId = ptr.String(xtv)
+			}
+
+		case strings.EqualFold("replaceRootVolumeTaskId", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				sv.ReplaceRootVolumeTaskId = ptr.String(xtv)
+			}
+
+		case strings.EqualFold("startTime", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				sv.StartTime = ptr.String(xtv)
+			}
+
+		case strings.EqualFold("tagSet", t.Name.Local):
+			nodeDecoder := smithyxml.WrapNodeDecoder(decoder.Decoder, t)
+			if err := awsEc2query_deserializeDocumentTagList(&sv.Tags, nodeDecoder); err != nil {
+				return err
+			}
+
+		case strings.EqualFold("taskState", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				sv.TaskState = types.ReplaceRootVolumeTaskState(xtv)
+			}
+
+		default:
+			// Do nothing and ignore the unexpected tag element
+			err = decoder.Decoder.Skip()
+			if err != nil {
+				return err
+			}
+
+		}
+		decoder = originalDecoder
+	}
+	*v = sv
+	return nil
+}
+
+func awsEc2query_deserializeDocumentReplaceRootVolumeTasks(v *[]types.ReplaceRootVolumeTask, decoder smithyxml.NodeDecoder) error {
+	if v == nil {
+		return fmt.Errorf("unexpected nil of type %T", v)
+	}
+	var sv []types.ReplaceRootVolumeTask
+	if *v == nil {
+		sv = make([]types.ReplaceRootVolumeTask, 0)
+	} else {
+		sv = *v
+	}
+
+	originalDecoder := decoder
+	for {
+		t, done, err := decoder.Token()
+		if err != nil {
+			return err
+		}
+		if done {
+			break
+		}
+		switch {
+		case strings.EqualFold("item", t.Name.Local):
+			var col types.ReplaceRootVolumeTask
+			nodeDecoder := smithyxml.WrapNodeDecoder(decoder.Decoder, t)
+			destAddr := &col
+			if err := awsEc2query_deserializeDocumentReplaceRootVolumeTask(&destAddr, nodeDecoder); err != nil {
+				return err
+			}
+			col = *destAddr
+			sv = append(sv, col)
+
+		default:
+			err = decoder.Decoder.Skip()
+			if err != nil {
+				return err
+			}
+
+		}
+		decoder = originalDecoder
+	}
+	*v = sv
+	return nil
+}
+
+func awsEc2query_deserializeDocumentReplaceRootVolumeTasksUnwrapped(v *[]types.ReplaceRootVolumeTask, decoder smithyxml.NodeDecoder) error {
+	var sv []types.ReplaceRootVolumeTask
+	if *v == nil {
+		sv = make([]types.ReplaceRootVolumeTask, 0)
+	} else {
+		sv = *v
+	}
+
+	switch {
+	default:
+		var mv types.ReplaceRootVolumeTask
+		t := decoder.StartEl
+		_ = t
+		nodeDecoder := smithyxml.WrapNodeDecoder(decoder.Decoder, t)
+		destAddr := &mv
+		if err := awsEc2query_deserializeDocumentReplaceRootVolumeTask(&destAddr, nodeDecoder); err != nil {
 			return err
 		}
 		mv = *destAddr
@@ -78364,7 +79447,7 @@ func awsEc2query_deserializeDocumentReservedInstances(v **types.ReservedInstance
 				if err != nil {
 					return err
 				}
-				sv.Duration = i64
+				sv.Duration = ptr.Int64(i64)
 			}
 
 		case strings.EqualFold("end", t.Name.Local):
@@ -78398,7 +79481,7 @@ func awsEc2query_deserializeDocumentReservedInstances(v **types.ReservedInstance
 				if err != nil {
 					return err
 				}
-				sv.FixedPrice = float32(f64)
+				sv.FixedPrice = ptr.Float32(float32(f64))
 			}
 
 		case strings.EqualFold("instanceCount", t.Name.Local):
@@ -78415,7 +79498,7 @@ func awsEc2query_deserializeDocumentReservedInstances(v **types.ReservedInstance
 				if err != nil {
 					return err
 				}
-				sv.InstanceCount = int32(i64)
+				sv.InstanceCount = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("instanceTenancy", t.Name.Local):
@@ -78565,7 +79648,7 @@ func awsEc2query_deserializeDocumentReservedInstances(v **types.ReservedInstance
 				if err != nil {
 					return err
 				}
-				sv.UsagePrice = float32(f64)
+				sv.UsagePrice = ptr.Float32(float32(f64))
 			}
 
 		default:
@@ -78631,7 +79714,7 @@ func awsEc2query_deserializeDocumentReservedInstancesConfiguration(v **types.Res
 				if err != nil {
 					return err
 				}
-				sv.InstanceCount = int32(i64)
+				sv.InstanceCount = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("instanceType", t.Name.Local):
@@ -79429,7 +80512,7 @@ func awsEc2query_deserializeDocumentReservedInstancesOffering(v **types.Reserved
 				if err != nil {
 					return err
 				}
-				sv.Duration = i64
+				sv.Duration = ptr.Int64(i64)
 			}
 
 		case strings.EqualFold("fixedPrice", t.Name.Local):
@@ -79446,7 +80529,7 @@ func awsEc2query_deserializeDocumentReservedInstancesOffering(v **types.Reserved
 				if err != nil {
 					return err
 				}
-				sv.FixedPrice = float32(f64)
+				sv.FixedPrice = ptr.Float32(float32(f64))
 			}
 
 		case strings.EqualFold("instanceTenancy", t.Name.Local):
@@ -79488,7 +80571,7 @@ func awsEc2query_deserializeDocumentReservedInstancesOffering(v **types.Reserved
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Marketplace = xtv
+				sv.Marketplace = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("offeringClass", t.Name.Local):
@@ -79582,7 +80665,7 @@ func awsEc2query_deserializeDocumentReservedInstancesOffering(v **types.Reserved
 				if err != nil {
 					return err
 				}
-				sv.UsagePrice = float32(f64)
+				sv.UsagePrice = ptr.Float32(float32(f64))
 			}
 
 		default:
@@ -80016,7 +81099,7 @@ func awsEc2query_deserializeDocumentResponseLaunchTemplateData(v **types.Respons
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.DisableApiTermination = xtv
+				sv.DisableApiTermination = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("ebsOptimized", t.Name.Local):
@@ -80032,7 +81115,7 @@ func awsEc2query_deserializeDocumentResponseLaunchTemplateData(v **types.Respons
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.EbsOptimized = xtv
+				sv.EbsOptimized = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("elasticGpuSpecificationSet", t.Name.Local):
@@ -80756,7 +81839,7 @@ func awsEc2query_deserializeDocumentRouteTableAssociation(v **types.RouteTableAs
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Main = xtv
+				sv.Main = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("routeTableAssociationId", t.Name.Local):
@@ -81045,7 +82128,7 @@ func awsEc2query_deserializeDocumentRunInstancesMonitoringEnabled(v **types.RunI
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Enabled = xtv
+				sv.Enabled = ptr.Bool(xtv)
 			}
 
 		default:
@@ -81247,7 +82330,7 @@ func awsEc2query_deserializeDocumentScheduledInstance(v **types.ScheduledInstanc
 				if err != nil {
 					return err
 				}
-				sv.InstanceCount = int32(i64)
+				sv.InstanceCount = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("instanceType", t.Name.Local):
@@ -81356,7 +82439,7 @@ func awsEc2query_deserializeDocumentScheduledInstance(v **types.ScheduledInstanc
 				if err != nil {
 					return err
 				}
-				sv.SlotDurationInHours = int32(i64)
+				sv.SlotDurationInHours = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("termEndDate", t.Name.Local):
@@ -81407,7 +82490,7 @@ func awsEc2query_deserializeDocumentScheduledInstance(v **types.ScheduledInstanc
 				if err != nil {
 					return err
 				}
-				sv.TotalScheduledInstanceHours = int32(i64)
+				sv.TotalScheduledInstanceHours = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -81473,7 +82556,7 @@ func awsEc2query_deserializeDocumentScheduledInstanceAvailability(v **types.Sche
 				if err != nil {
 					return err
 				}
-				sv.AvailableInstanceCount = int32(i64)
+				sv.AvailableInstanceCount = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("firstSlotStartTime", t.Name.Local):
@@ -81533,7 +82616,7 @@ func awsEc2query_deserializeDocumentScheduledInstanceAvailability(v **types.Sche
 				if err != nil {
 					return err
 				}
-				sv.MaxTermDurationInDays = int32(i64)
+				sv.MaxTermDurationInDays = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("minTermDurationInDays", t.Name.Local):
@@ -81550,7 +82633,7 @@ func awsEc2query_deserializeDocumentScheduledInstanceAvailability(v **types.Sche
 				if err != nil {
 					return err
 				}
-				sv.MinTermDurationInDays = int32(i64)
+				sv.MinTermDurationInDays = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("networkPlatform", t.Name.Local):
@@ -81612,7 +82695,7 @@ func awsEc2query_deserializeDocumentScheduledInstanceAvailability(v **types.Sche
 				if err != nil {
 					return err
 				}
-				sv.SlotDurationInHours = int32(i64)
+				sv.SlotDurationInHours = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("totalScheduledInstanceHours", t.Name.Local):
@@ -81629,7 +82712,7 @@ func awsEc2query_deserializeDocumentScheduledInstanceAvailability(v **types.Sche
 				if err != nil {
 					return err
 				}
-				sv.TotalScheduledInstanceHours = int32(i64)
+				sv.TotalScheduledInstanceHours = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -81763,7 +82846,7 @@ func awsEc2query_deserializeDocumentScheduledInstanceRecurrence(v **types.Schedu
 				if err != nil {
 					return err
 				}
-				sv.Interval = int32(i64)
+				sv.Interval = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("occurrenceDaySet", t.Name.Local):
@@ -81785,7 +82868,7 @@ func awsEc2query_deserializeDocumentScheduledInstanceRecurrence(v **types.Schedu
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.OccurrenceRelativeToEnd = xtv
+				sv.OccurrenceRelativeToEnd = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("occurrenceUnit", t.Name.Local):
@@ -82390,7 +83473,7 @@ func awsEc2query_deserializeDocumentServiceConfiguration(v **types.ServiceConfig
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.AcceptanceRequired = xtv
+				sv.AcceptanceRequired = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("availabilityZoneSet", t.Name.Local):
@@ -82424,7 +83507,7 @@ func awsEc2query_deserializeDocumentServiceConfiguration(v **types.ServiceConfig
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.ManagesVpcEndpoints = xtv
+				sv.ManagesVpcEndpoints = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("networkLoadBalancerArnSet", t.Name.Local):
@@ -82620,7 +83703,7 @@ func awsEc2query_deserializeDocumentServiceDetail(v **types.ServiceDetail, decod
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.AcceptanceRequired = xtv
+				sv.AcceptanceRequired = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("availabilityZoneSet", t.Name.Local):
@@ -82648,7 +83731,7 @@ func awsEc2query_deserializeDocumentServiceDetail(v **types.ServiceDetail, decod
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.ManagesVpcEndpoints = xtv
+				sv.ManagesVpcEndpoints = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("owner", t.Name.Local):
@@ -82747,7 +83830,7 @@ func awsEc2query_deserializeDocumentServiceDetail(v **types.ServiceDetail, decod
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.VpcEndpointPolicySupported = xtv
+				sv.VpcEndpointPolicySupported = ptr.Bool(xtv)
 			}
 
 		default:
@@ -83010,7 +84093,7 @@ func awsEc2query_deserializeDocumentSnapshot(v **types.Snapshot, decoder smithyx
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Encrypted = xtv
+				sv.Encrypted = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("kmsKeyId", t.Name.Local):
@@ -83024,6 +84107,19 @@ func awsEc2query_deserializeDocumentSnapshot(v **types.Snapshot, decoder smithyx
 			{
 				xtv := string(val)
 				sv.KmsKeyId = ptr.String(xtv)
+			}
+
+		case strings.EqualFold("outpostArn", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				sv.OutpostArn = ptr.String(xtv)
 			}
 
 		case strings.EqualFold("ownerAlias", t.Name.Local):
@@ -83154,7 +84250,7 @@ func awsEc2query_deserializeDocumentSnapshot(v **types.Snapshot, decoder smithyx
 				if err != nil {
 					return err
 				}
-				sv.VolumeSize = int32(i64)
+				sv.VolumeSize = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -83233,7 +84329,7 @@ func awsEc2query_deserializeDocumentSnapshotDetail(v **types.SnapshotDetail, dec
 				if err != nil {
 					return err
 				}
-				sv.DiskImageSize = f64
+				sv.DiskImageSize = ptr.Float64(f64)
 			}
 
 		case strings.EqualFold("format", t.Name.Local):
@@ -83450,7 +84546,20 @@ func awsEc2query_deserializeDocumentSnapshotInfo(v **types.SnapshotInfo, decoder
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Encrypted = xtv
+				sv.Encrypted = ptr.Bool(xtv)
+			}
+
+		case strings.EqualFold("outpostArn", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				sv.OutpostArn = ptr.String(xtv)
 			}
 
 		case strings.EqualFold("ownerId", t.Name.Local):
@@ -83555,7 +84664,7 @@ func awsEc2query_deserializeDocumentSnapshotInfo(v **types.SnapshotInfo, decoder
 				if err != nil {
 					return err
 				}
-				sv.VolumeSize = int32(i64)
+				sv.VolumeSize = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -83757,7 +84866,7 @@ func awsEc2query_deserializeDocumentSnapshotTaskDetail(v **types.SnapshotTaskDet
 				if err != nil {
 					return err
 				}
-				sv.DiskImageSize = f64
+				sv.DiskImageSize = ptr.Float64(f64)
 			}
 
 		case strings.EqualFold("encrypted", t.Name.Local):
@@ -83773,7 +84882,7 @@ func awsEc2query_deserializeDocumentSnapshotTaskDetail(v **types.SnapshotTaskDet
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Encrypted = xtv
+				sv.Encrypted = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("format", t.Name.Local):
@@ -84084,7 +85193,7 @@ func awsEc2query_deserializeDocumentSpotFleetLaunchSpecification(v **types.SpotF
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.EbsOptimized = xtv
+				sv.EbsOptimized = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("iamInstanceProfile", t.Name.Local):
@@ -84241,7 +85350,7 @@ func awsEc2query_deserializeDocumentSpotFleetLaunchSpecification(v **types.SpotF
 				if err != nil {
 					return err
 				}
-				sv.WeightedCapacity = f64
+				sv.WeightedCapacity = ptr.Float64(f64)
 			}
 
 		default:
@@ -84293,7 +85402,7 @@ func awsEc2query_deserializeDocumentSpotFleetMonitoring(v **types.SpotFleetMonit
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Enabled = xtv
+				sv.Enabled = ptr.Bool(xtv)
 			}
 
 		default:
@@ -84489,7 +85598,7 @@ func awsEc2query_deserializeDocumentSpotFleetRequestConfigData(v **types.SpotFle
 				if err != nil {
 					return err
 				}
-				sv.FulfilledCapacity = f64
+				sv.FulfilledCapacity = ptr.Float64(f64)
 			}
 
 		case strings.EqualFold("iamFleetRole", t.Name.Local):
@@ -84532,7 +85641,7 @@ func awsEc2query_deserializeDocumentSpotFleetRequestConfigData(v **types.SpotFle
 				if err != nil {
 					return err
 				}
-				sv.InstancePoolsToUseCount = int32(i64)
+				sv.InstancePoolsToUseCount = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("launchSpecifications", t.Name.Local):
@@ -84580,7 +85689,7 @@ func awsEc2query_deserializeDocumentSpotFleetRequestConfigData(v **types.SpotFle
 				if err != nil {
 					return err
 				}
-				sv.OnDemandFulfilledCapacity = f64
+				sv.OnDemandFulfilledCapacity = ptr.Float64(f64)
 			}
 
 		case strings.EqualFold("onDemandMaxTotalPrice", t.Name.Local):
@@ -84610,7 +85719,7 @@ func awsEc2query_deserializeDocumentSpotFleetRequestConfigData(v **types.SpotFle
 				if err != nil {
 					return err
 				}
-				sv.OnDemandTargetCapacity = int32(i64)
+				sv.OnDemandTargetCapacity = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("replaceUnhealthyInstances", t.Name.Local):
@@ -84626,7 +85735,7 @@ func awsEc2query_deserializeDocumentSpotFleetRequestConfigData(v **types.SpotFle
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.ReplaceUnhealthyInstances = xtv
+				sv.ReplaceUnhealthyInstances = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("spotMaintenanceStrategies", t.Name.Local):
@@ -84681,7 +85790,7 @@ func awsEc2query_deserializeDocumentSpotFleetRequestConfigData(v **types.SpotFle
 				if err != nil {
 					return err
 				}
-				sv.TargetCapacity = int32(i64)
+				sv.TargetCapacity = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("terminateInstancesWithExpiration", t.Name.Local):
@@ -84697,7 +85806,7 @@ func awsEc2query_deserializeDocumentSpotFleetRequestConfigData(v **types.SpotFle
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.TerminateInstancesWithExpiration = xtv
+				sv.TerminateInstancesWithExpiration = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("type", t.Name.Local):
@@ -85014,7 +86123,7 @@ func awsEc2query_deserializeDocumentSpotInstanceRequest(v **types.SpotInstanceRe
 				if err != nil {
 					return err
 				}
-				sv.BlockDurationMinutes = int32(i64)
+				sv.BlockDurationMinutes = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("createTime", t.Name.Local):
@@ -85536,7 +86645,7 @@ func awsEc2query_deserializeDocumentSpotOptions(v **types.SpotOptions, decoder s
 				if err != nil {
 					return err
 				}
-				sv.InstancePoolsToUseCount = int32(i64)
+				sv.InstancePoolsToUseCount = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("maintenanceStrategies", t.Name.Local):
@@ -85572,7 +86681,7 @@ func awsEc2query_deserializeDocumentSpotOptions(v **types.SpotOptions, decoder s
 				if err != nil {
 					return err
 				}
-				sv.MinTargetCapacity = int32(i64)
+				sv.MinTargetCapacity = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("singleAvailabilityZone", t.Name.Local):
@@ -85588,7 +86697,7 @@ func awsEc2query_deserializeDocumentSpotOptions(v **types.SpotOptions, decoder s
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.SingleAvailabilityZone = xtv
+				sv.SingleAvailabilityZone = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("singleInstanceType", t.Name.Local):
@@ -85604,7 +86713,7 @@ func awsEc2query_deserializeDocumentSpotOptions(v **types.SpotOptions, decoder s
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.SingleInstanceType = xtv
+				sv.SingleInstanceType = ptr.Bool(xtv)
 			}
 
 		default:
@@ -85905,7 +87014,7 @@ func awsEc2query_deserializeDocumentStaleIpPermission(v **types.StaleIpPermissio
 				if err != nil {
 					return err
 				}
-				sv.FromPort = int32(i64)
+				sv.FromPort = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("ipProtocol", t.Name.Local):
@@ -85947,7 +87056,7 @@ func awsEc2query_deserializeDocumentStaleIpPermission(v **types.StaleIpPermissio
 				if err != nil {
 					return err
 				}
-				sv.ToPort = int32(i64)
+				sv.ToPort = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("groups", t.Name.Local):
@@ -86310,6 +87419,209 @@ func awsEc2query_deserializeDocumentStorage(v **types.Storage, decoder smithyxml
 	return nil
 }
 
+func awsEc2query_deserializeDocumentStoreImageTaskResult(v **types.StoreImageTaskResult, decoder smithyxml.NodeDecoder) error {
+	if v == nil {
+		return fmt.Errorf("unexpected nil of type %T", v)
+	}
+	var sv *types.StoreImageTaskResult
+	if *v == nil {
+		sv = &types.StoreImageTaskResult{}
+	} else {
+		sv = *v
+	}
+
+	for {
+		t, done, err := decoder.Token()
+		if err != nil {
+			return err
+		}
+		if done {
+			break
+		}
+		originalDecoder := decoder
+		decoder = smithyxml.WrapNodeDecoder(originalDecoder.Decoder, t)
+		switch {
+		case strings.EqualFold("amiId", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				sv.AmiId = ptr.String(xtv)
+			}
+
+		case strings.EqualFold("bucket", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				sv.Bucket = ptr.String(xtv)
+			}
+
+		case strings.EqualFold("progressPercentage", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				i64, err := strconv.ParseInt(xtv, 10, 64)
+				if err != nil {
+					return err
+				}
+				sv.ProgressPercentage = ptr.Int32(int32(i64))
+			}
+
+		case strings.EqualFold("s3objectKey", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				sv.S3objectKey = ptr.String(xtv)
+			}
+
+		case strings.EqualFold("storeTaskFailureReason", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				sv.StoreTaskFailureReason = ptr.String(xtv)
+			}
+
+		case strings.EqualFold("storeTaskState", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				sv.StoreTaskState = ptr.String(xtv)
+			}
+
+		case strings.EqualFold("taskStartTime", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				t, err := smithytime.ParseDateTime(xtv)
+				if err != nil {
+					return err
+				}
+				sv.TaskStartTime = ptr.Time(t)
+			}
+
+		default:
+			// Do nothing and ignore the unexpected tag element
+			err = decoder.Decoder.Skip()
+			if err != nil {
+				return err
+			}
+
+		}
+		decoder = originalDecoder
+	}
+	*v = sv
+	return nil
+}
+
+func awsEc2query_deserializeDocumentStoreImageTaskResultSet(v *[]types.StoreImageTaskResult, decoder smithyxml.NodeDecoder) error {
+	if v == nil {
+		return fmt.Errorf("unexpected nil of type %T", v)
+	}
+	var sv []types.StoreImageTaskResult
+	if *v == nil {
+		sv = make([]types.StoreImageTaskResult, 0)
+	} else {
+		sv = *v
+	}
+
+	originalDecoder := decoder
+	for {
+		t, done, err := decoder.Token()
+		if err != nil {
+			return err
+		}
+		if done {
+			break
+		}
+		switch {
+		case strings.EqualFold("item", t.Name.Local):
+			var col types.StoreImageTaskResult
+			nodeDecoder := smithyxml.WrapNodeDecoder(decoder.Decoder, t)
+			destAddr := &col
+			if err := awsEc2query_deserializeDocumentStoreImageTaskResult(&destAddr, nodeDecoder); err != nil {
+				return err
+			}
+			col = *destAddr
+			sv = append(sv, col)
+
+		default:
+			err = decoder.Decoder.Skip()
+			if err != nil {
+				return err
+			}
+
+		}
+		decoder = originalDecoder
+	}
+	*v = sv
+	return nil
+}
+
+func awsEc2query_deserializeDocumentStoreImageTaskResultSetUnwrapped(v *[]types.StoreImageTaskResult, decoder smithyxml.NodeDecoder) error {
+	var sv []types.StoreImageTaskResult
+	if *v == nil {
+		sv = make([]types.StoreImageTaskResult, 0)
+	} else {
+		sv = *v
+	}
+
+	switch {
+	default:
+		var mv types.StoreImageTaskResult
+		t := decoder.StartEl
+		_ = t
+		nodeDecoder := smithyxml.WrapNodeDecoder(decoder.Decoder, t)
+		destAddr := &mv
+		if err := awsEc2query_deserializeDocumentStoreImageTaskResult(&destAddr, nodeDecoder); err != nil {
+			return err
+		}
+		mv = *destAddr
+		sv = append(sv, mv)
+	}
+	*v = sv
+	return nil
+}
 func awsEc2query_deserializeDocumentStringList(v *[]string, decoder smithyxml.NodeDecoder) error {
 	if v == nil {
 		return fmt.Errorf("unexpected nil of type %T", v)
@@ -86425,7 +87737,7 @@ func awsEc2query_deserializeDocumentSubnet(v **types.Subnet, decoder smithyxml.N
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.AssignIpv6AddressOnCreation = xtv
+				sv.AssignIpv6AddressOnCreation = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("availabilityZone", t.Name.Local):
@@ -86468,7 +87780,7 @@ func awsEc2query_deserializeDocumentSubnet(v **types.Subnet, decoder smithyxml.N
 				if err != nil {
 					return err
 				}
-				sv.AvailableIpAddressCount = int32(i64)
+				sv.AvailableIpAddressCount = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("cidrBlock", t.Name.Local):
@@ -86510,7 +87822,7 @@ func awsEc2query_deserializeDocumentSubnet(v **types.Subnet, decoder smithyxml.N
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.DefaultForAz = xtv
+				sv.DefaultForAz = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("ipv6CidrBlockAssociationSet", t.Name.Local):
@@ -86532,7 +87844,7 @@ func awsEc2query_deserializeDocumentSubnet(v **types.Subnet, decoder smithyxml.N
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.MapCustomerOwnedIpOnLaunch = xtv
+				sv.MapCustomerOwnedIpOnLaunch = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("mapPublicIpOnLaunch", t.Name.Local):
@@ -86548,7 +87860,7 @@ func awsEc2query_deserializeDocumentSubnet(v **types.Subnet, decoder smithyxml.N
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.MapPublicIpOnLaunch = xtv
+				sv.MapPublicIpOnLaunch = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("outpostArn", t.Name.Local):
@@ -87737,7 +89049,7 @@ func awsEc2query_deserializeDocumentTargetCapacitySpecification(v **types.Target
 				if err != nil {
 					return err
 				}
-				sv.OnDemandTargetCapacity = int32(i64)
+				sv.OnDemandTargetCapacity = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("spotTargetCapacity", t.Name.Local):
@@ -87754,7 +89066,7 @@ func awsEc2query_deserializeDocumentTargetCapacitySpecification(v **types.Target
 				if err != nil {
 					return err
 				}
-				sv.SpotTargetCapacity = int32(i64)
+				sv.SpotTargetCapacity = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("totalTargetCapacity", t.Name.Local):
@@ -87771,7 +89083,7 @@ func awsEc2query_deserializeDocumentTargetCapacitySpecification(v **types.Target
 				if err != nil {
 					return err
 				}
-				sv.TotalTargetCapacity = int32(i64)
+				sv.TotalTargetCapacity = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -87824,7 +89136,7 @@ func awsEc2query_deserializeDocumentTargetConfiguration(v **types.TargetConfigur
 				if err != nil {
 					return err
 				}
-				sv.InstanceCount = int32(i64)
+				sv.InstanceCount = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("offeringId", t.Name.Local):
@@ -88668,7 +89980,7 @@ func awsEc2query_deserializeDocumentTrafficMirrorFilterRule(v **types.TrafficMir
 				if err != nil {
 					return err
 				}
-				sv.Protocol = int32(i64)
+				sv.Protocol = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("ruleAction", t.Name.Local):
@@ -88698,7 +90010,7 @@ func awsEc2query_deserializeDocumentTrafficMirrorFilterRule(v **types.TrafficMir
 				if err != nil {
 					return err
 				}
-				sv.RuleNumber = int32(i64)
+				sv.RuleNumber = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("sourceCidrBlock", t.Name.Local):
@@ -89025,7 +90337,7 @@ func awsEc2query_deserializeDocumentTrafficMirrorPortRange(v **types.TrafficMirr
 				if err != nil {
 					return err
 				}
-				sv.FromPort = int32(i64)
+				sv.FromPort = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("toPort", t.Name.Local):
@@ -89042,7 +90354,7 @@ func awsEc2query_deserializeDocumentTrafficMirrorPortRange(v **types.TrafficMirr
 				if err != nil {
 					return err
 				}
-				sv.ToPort = int32(i64)
+				sv.ToPort = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -89134,7 +90446,7 @@ func awsEc2query_deserializeDocumentTrafficMirrorSession(v **types.TrafficMirror
 				if err != nil {
 					return err
 				}
-				sv.PacketLength = int32(i64)
+				sv.PacketLength = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("sessionNumber", t.Name.Local):
@@ -89151,7 +90463,7 @@ func awsEc2query_deserializeDocumentTrafficMirrorSession(v **types.TrafficMirror
 				if err != nil {
 					return err
 				}
-				sv.SessionNumber = int32(i64)
+				sv.SessionNumber = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("tagSet", t.Name.Local):
@@ -89213,7 +90525,7 @@ func awsEc2query_deserializeDocumentTrafficMirrorSession(v **types.TrafficMirror
 				if err != nil {
 					return err
 				}
-				sv.VirtualNetworkId = int32(i64)
+				sv.VirtualNetworkId = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -89997,7 +91309,7 @@ func awsEc2query_deserializeDocumentTransitGatewayAttachmentBgpConfiguration(v *
 				if err != nil {
 					return err
 				}
-				sv.PeerAsn = i64
+				sv.PeerAsn = ptr.Int64(i64)
 			}
 
 		case strings.EqualFold("transitGatewayAddress", t.Name.Local):
@@ -90027,7 +91339,7 @@ func awsEc2query_deserializeDocumentTransitGatewayAttachmentBgpConfiguration(v *
 				if err != nil {
 					return err
 				}
-				sv.TransitGatewayAsn = i64
+				sv.TransitGatewayAsn = ptr.Int64(i64)
 			}
 
 		default:
@@ -91597,7 +92909,7 @@ func awsEc2query_deserializeDocumentTransitGatewayMulticastGroup(v **types.Trans
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.GroupMember = xtv
+				sv.GroupMember = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("groupSource", t.Name.Local):
@@ -91613,7 +92925,7 @@ func awsEc2query_deserializeDocumentTransitGatewayMulticastGroup(v **types.Trans
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.GroupSource = xtv
+				sv.GroupSource = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("memberType", t.Name.Local):
@@ -91974,7 +93286,7 @@ func awsEc2query_deserializeDocumentTransitGatewayOptions(v **types.TransitGatew
 				if err != nil {
 					return err
 				}
-				sv.AmazonSideAsn = i64
+				sv.AmazonSideAsn = ptr.Int64(i64)
 			}
 
 		case strings.EqualFold("associationDefaultRouteTableId", t.Name.Local):
@@ -92382,7 +93694,7 @@ func awsEc2query_deserializeDocumentTransitGatewayPrefixListReference(v **types.
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Blackhole = xtv
+				sv.Blackhole = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("prefixListId", t.Name.Local):
@@ -92983,7 +94295,7 @@ func awsEc2query_deserializeDocumentTransitGatewayRouteTable(v **types.TransitGa
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.DefaultAssociationRouteTable = xtv
+				sv.DefaultAssociationRouteTable = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("defaultPropagationRouteTable", t.Name.Local):
@@ -92999,7 +94311,7 @@ func awsEc2query_deserializeDocumentTransitGatewayRouteTable(v **types.TransitGa
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.DefaultPropagationRouteTable = xtv
+				sv.DefaultPropagationRouteTable = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("state", t.Name.Local):
@@ -93769,7 +95081,7 @@ func awsEc2query_deserializeDocumentTunnelOption(v **types.TunnelOption, decoder
 				if err != nil {
 					return err
 				}
-				sv.DpdTimeoutSeconds = int32(i64)
+				sv.DpdTimeoutSeconds = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("ikeVersionSet", t.Name.Local):
@@ -93823,7 +95135,7 @@ func awsEc2query_deserializeDocumentTunnelOption(v **types.TunnelOption, decoder
 				if err != nil {
 					return err
 				}
-				sv.Phase1LifetimeSeconds = int32(i64)
+				sv.Phase1LifetimeSeconds = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("phase2DHGroupNumberSet", t.Name.Local):
@@ -93858,7 +95170,7 @@ func awsEc2query_deserializeDocumentTunnelOption(v **types.TunnelOption, decoder
 				if err != nil {
 					return err
 				}
-				sv.Phase2LifetimeSeconds = int32(i64)
+				sv.Phase2LifetimeSeconds = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("preSharedKey", t.Name.Local):
@@ -93888,7 +95200,7 @@ func awsEc2query_deserializeDocumentTunnelOption(v **types.TunnelOption, decoder
 				if err != nil {
 					return err
 				}
-				sv.RekeyFuzzPercentage = int32(i64)
+				sv.RekeyFuzzPercentage = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("rekeyMarginTimeSeconds", t.Name.Local):
@@ -93905,7 +95217,7 @@ func awsEc2query_deserializeDocumentTunnelOption(v **types.TunnelOption, decoder
 				if err != nil {
 					return err
 				}
-				sv.RekeyMarginTimeSeconds = int32(i64)
+				sv.RekeyMarginTimeSeconds = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("replayWindowSize", t.Name.Local):
@@ -93922,7 +95234,7 @@ func awsEc2query_deserializeDocumentTunnelOption(v **types.TunnelOption, decoder
 				if err != nil {
 					return err
 				}
-				sv.ReplayWindowSize = int32(i64)
+				sv.ReplayWindowSize = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("startupAction", t.Name.Local):
@@ -95208,7 +96520,7 @@ func awsEc2query_deserializeDocumentVgwTelemetry(v **types.VgwTelemetry, decoder
 				if err != nil {
 					return err
 				}
-				sv.AcceptedRouteCount = int32(i64)
+				sv.AcceptedRouteCount = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("certificateArn", t.Name.Local):
@@ -95513,7 +96825,7 @@ func awsEc2query_deserializeDocumentVolume(v **types.Volume, decoder smithyxml.N
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Encrypted = xtv
+				sv.Encrypted = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("fastRestored", t.Name.Local):
@@ -95529,7 +96841,7 @@ func awsEc2query_deserializeDocumentVolume(v **types.Volume, decoder smithyxml.N
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.FastRestored = xtv
+				sv.FastRestored = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("iops", t.Name.Local):
@@ -95546,7 +96858,7 @@ func awsEc2query_deserializeDocumentVolume(v **types.Volume, decoder smithyxml.N
 				if err != nil {
 					return err
 				}
-				sv.Iops = int32(i64)
+				sv.Iops = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("kmsKeyId", t.Name.Local):
@@ -95575,7 +96887,7 @@ func awsEc2query_deserializeDocumentVolume(v **types.Volume, decoder smithyxml.N
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.MultiAttachEnabled = xtv
+				sv.MultiAttachEnabled = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("outpostArn", t.Name.Local):
@@ -95605,7 +96917,7 @@ func awsEc2query_deserializeDocumentVolume(v **types.Volume, decoder smithyxml.N
 				if err != nil {
 					return err
 				}
-				sv.Size = int32(i64)
+				sv.Size = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("snapshotId", t.Name.Local):
@@ -95654,7 +96966,7 @@ func awsEc2query_deserializeDocumentVolume(v **types.Volume, decoder smithyxml.N
 				if err != nil {
 					return err
 				}
-				sv.Throughput = int32(i64)
+				sv.Throughput = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("volumeId", t.Name.Local):
@@ -95749,7 +97061,7 @@ func awsEc2query_deserializeDocumentVolumeAttachment(v **types.VolumeAttachment,
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.DeleteOnTermination = xtv
+				sv.DeleteOnTermination = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("device", t.Name.Local):
@@ -96020,7 +97332,7 @@ func awsEc2query_deserializeDocumentVolumeModification(v **types.VolumeModificat
 				if err != nil {
 					return err
 				}
-				sv.OriginalIops = int32(i64)
+				sv.OriginalIops = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("originalMultiAttachEnabled", t.Name.Local):
@@ -96036,7 +97348,7 @@ func awsEc2query_deserializeDocumentVolumeModification(v **types.VolumeModificat
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.OriginalMultiAttachEnabled = xtv
+				sv.OriginalMultiAttachEnabled = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("originalSize", t.Name.Local):
@@ -96053,7 +97365,7 @@ func awsEc2query_deserializeDocumentVolumeModification(v **types.VolumeModificat
 				if err != nil {
 					return err
 				}
-				sv.OriginalSize = int32(i64)
+				sv.OriginalSize = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("originalThroughput", t.Name.Local):
@@ -96070,7 +97382,7 @@ func awsEc2query_deserializeDocumentVolumeModification(v **types.VolumeModificat
 				if err != nil {
 					return err
 				}
-				sv.OriginalThroughput = int32(i64)
+				sv.OriginalThroughput = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("originalVolumeType", t.Name.Local):
@@ -96100,7 +97412,7 @@ func awsEc2query_deserializeDocumentVolumeModification(v **types.VolumeModificat
 				if err != nil {
 					return err
 				}
-				sv.Progress = i64
+				sv.Progress = ptr.Int64(i64)
 			}
 
 		case strings.EqualFold("startTime", t.Name.Local):
@@ -96147,7 +97459,7 @@ func awsEc2query_deserializeDocumentVolumeModification(v **types.VolumeModificat
 				if err != nil {
 					return err
 				}
-				sv.TargetIops = int32(i64)
+				sv.TargetIops = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("targetMultiAttachEnabled", t.Name.Local):
@@ -96163,7 +97475,7 @@ func awsEc2query_deserializeDocumentVolumeModification(v **types.VolumeModificat
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.TargetMultiAttachEnabled = xtv
+				sv.TargetMultiAttachEnabled = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("targetSize", t.Name.Local):
@@ -96180,7 +97492,7 @@ func awsEc2query_deserializeDocumentVolumeModification(v **types.VolumeModificat
 				if err != nil {
 					return err
 				}
-				sv.TargetSize = int32(i64)
+				sv.TargetSize = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("targetThroughput", t.Name.Local):
@@ -96197,7 +97509,7 @@ func awsEc2query_deserializeDocumentVolumeModification(v **types.VolumeModificat
 				if err != nil {
 					return err
 				}
-				sv.TargetThroughput = int32(i64)
+				sv.TargetThroughput = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("targetVolumeType", t.Name.Local):
@@ -97222,7 +98534,7 @@ func awsEc2query_deserializeDocumentVpc(v **types.Vpc, decoder smithyxml.NodeDec
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.IsDefault = xtv
+				sv.IsDefault = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("ownerId", t.Name.Local):
@@ -97647,7 +98959,7 @@ func awsEc2query_deserializeDocumentVpcClassicLink(v **types.VpcClassicLink, dec
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.ClassicLinkEnabled = xtv
+				sv.ClassicLinkEnabled = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("tagSet", t.Name.Local):
@@ -97853,7 +99165,7 @@ func awsEc2query_deserializeDocumentVpcEndpoint(v **types.VpcEndpoint, decoder s
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.PrivateDnsEnabled = xtv
+				sv.PrivateDnsEnabled = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("requesterManaged", t.Name.Local):
@@ -97869,7 +99181,7 @@ func awsEc2query_deserializeDocumentVpcEndpoint(v **types.VpcEndpoint, decoder s
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.RequesterManaged = xtv
+				sv.RequesterManaged = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("routeTableIdSet", t.Name.Local):
@@ -98651,7 +99963,7 @@ func awsEc2query_deserializeDocumentVpcPeeringConnectionOptionsDescription(v **t
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.AllowDnsResolutionFromRemoteVpc = xtv
+				sv.AllowDnsResolutionFromRemoteVpc = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("allowEgressFromLocalClassicLinkToRemoteVpc", t.Name.Local):
@@ -98667,7 +99979,7 @@ func awsEc2query_deserializeDocumentVpcPeeringConnectionOptionsDescription(v **t
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.AllowEgressFromLocalClassicLinkToRemoteVpc = xtv
+				sv.AllowEgressFromLocalClassicLinkToRemoteVpc = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("allowEgressFromLocalVpcToRemoteClassicLink", t.Name.Local):
@@ -98683,7 +99995,7 @@ func awsEc2query_deserializeDocumentVpcPeeringConnectionOptionsDescription(v **t
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.AllowEgressFromLocalVpcToRemoteClassicLink = xtv
+				sv.AllowEgressFromLocalVpcToRemoteClassicLink = ptr.Bool(xtv)
 			}
 
 		default:
@@ -99135,7 +100447,7 @@ func awsEc2query_deserializeDocumentVpnConnectionOptions(v **types.VpnConnection
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.EnableAcceleration = xtv
+				sv.EnableAcceleration = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("localIpv4NetworkCidr", t.Name.Local):
@@ -99203,7 +100515,7 @@ func awsEc2query_deserializeDocumentVpnConnectionOptions(v **types.VpnConnection
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.StaticRoutesOnly = xtv
+				sv.StaticRoutesOnly = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("tunnelInsideIpVersion", t.Name.Local):
@@ -99275,7 +100587,7 @@ func awsEc2query_deserializeDocumentVpnGateway(v **types.VpnGateway, decoder smi
 				if err != nil {
 					return err
 				}
-				sv.AmazonSideAsn = i64
+				sv.AmazonSideAsn = ptr.Int64(i64)
 			}
 
 		case strings.EqualFold("availabilityZone", t.Name.Local):
@@ -100713,7 +102025,7 @@ func awsEc2query_deserializeOpDocumentAttachClassicLinkVpcOutput(v **AttachClass
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -100779,7 +102091,7 @@ func awsEc2query_deserializeOpDocumentAttachNetworkInterfaceOutput(v **AttachNet
 				if err != nil {
 					return err
 				}
-				sv.NetworkCardIndex = int32(i64)
+				sv.NetworkCardIndex = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -100848,7 +102160,7 @@ func awsEc2query_deserializeOpDocumentAttachVolumeOutput(v **AttachVolumeOutput,
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.DeleteOnTermination = xtv
+				sv.DeleteOnTermination = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("device", t.Name.Local):
@@ -101120,7 +102432,7 @@ func awsEc2query_deserializeOpDocumentCancelCapacityReservationOutput(v **Cancel
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -101392,7 +102704,7 @@ func awsEc2query_deserializeOpDocumentConfirmProductInstanceOutput(v **ConfirmPr
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -102773,6 +104085,19 @@ func awsEc2query_deserializeOpDocumentCreateNetworkInterfaceOutput(v **CreateNet
 		originalDecoder := decoder
 		decoder = smithyxml.WrapNodeDecoder(originalDecoder.Decoder, t)
 		switch {
+		case strings.EqualFold("clientToken", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				sv.ClientToken = ptr.String(xtv)
+			}
+
 		case strings.EqualFold("networkInterface", t.Name.Local):
 			nodeDecoder := smithyxml.WrapNodeDecoder(decoder.Decoder, t)
 			if err := awsEc2query_deserializeDocumentNetworkInterface(&sv.NetworkInterface, nodeDecoder); err != nil {
@@ -102877,6 +104202,48 @@ func awsEc2query_deserializeOpDocumentCreatePlacementGroupOutput(v **CreatePlace
 	return nil
 }
 
+func awsEc2query_deserializeOpDocumentCreateReplaceRootVolumeTaskOutput(v **CreateReplaceRootVolumeTaskOutput, decoder smithyxml.NodeDecoder) error {
+	if v == nil {
+		return fmt.Errorf("unexpected nil of type %T", v)
+	}
+	var sv *CreateReplaceRootVolumeTaskOutput
+	if *v == nil {
+		sv = &CreateReplaceRootVolumeTaskOutput{}
+	} else {
+		sv = *v
+	}
+
+	for {
+		t, done, err := decoder.Token()
+		if err != nil {
+			return err
+		}
+		if done {
+			break
+		}
+		originalDecoder := decoder
+		decoder = smithyxml.WrapNodeDecoder(originalDecoder.Decoder, t)
+		switch {
+		case strings.EqualFold("replaceRootVolumeTask", t.Name.Local):
+			nodeDecoder := smithyxml.WrapNodeDecoder(decoder.Decoder, t)
+			if err := awsEc2query_deserializeDocumentReplaceRootVolumeTask(&sv.ReplaceRootVolumeTask, nodeDecoder); err != nil {
+				return err
+			}
+
+		default:
+			// Do nothing and ignore the unexpected tag element
+			err = decoder.Decoder.Skip()
+			if err != nil {
+				return err
+			}
+
+		}
+		decoder = originalDecoder
+	}
+	*v = sv
+	return nil
+}
+
 func awsEc2query_deserializeOpDocumentCreateReservedInstancesListingOutput(v **CreateReservedInstancesListingOutput, decoder smithyxml.NodeDecoder) error {
 	if v == nil {
 		return fmt.Errorf("unexpected nil of type %T", v)
@@ -102903,6 +104270,55 @@ func awsEc2query_deserializeOpDocumentCreateReservedInstancesListingOutput(v **C
 			nodeDecoder := smithyxml.WrapNodeDecoder(decoder.Decoder, t)
 			if err := awsEc2query_deserializeDocumentReservedInstancesListingList(&sv.ReservedInstancesListings, nodeDecoder); err != nil {
 				return err
+			}
+
+		default:
+			// Do nothing and ignore the unexpected tag element
+			err = decoder.Decoder.Skip()
+			if err != nil {
+				return err
+			}
+
+		}
+		decoder = originalDecoder
+	}
+	*v = sv
+	return nil
+}
+
+func awsEc2query_deserializeOpDocumentCreateRestoreImageTaskOutput(v **CreateRestoreImageTaskOutput, decoder smithyxml.NodeDecoder) error {
+	if v == nil {
+		return fmt.Errorf("unexpected nil of type %T", v)
+	}
+	var sv *CreateRestoreImageTaskOutput
+	if *v == nil {
+		sv = &CreateRestoreImageTaskOutput{}
+	} else {
+		sv = *v
+	}
+
+	for {
+		t, done, err := decoder.Token()
+		if err != nil {
+			return err
+		}
+		if done {
+			break
+		}
+		originalDecoder := decoder
+		decoder = smithyxml.WrapNodeDecoder(originalDecoder.Decoder, t)
+		switch {
+		case strings.EqualFold("imageId", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				sv.ImageId = ptr.String(xtv)
 			}
 
 		default:
@@ -102954,7 +104370,7 @@ func awsEc2query_deserializeOpDocumentCreateRouteOutput(v **CreateRouteOutput, d
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -103129,7 +104545,7 @@ func awsEc2query_deserializeOpDocumentCreateSnapshotOutput(v **CreateSnapshotOut
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Encrypted = xtv
+				sv.Encrypted = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("kmsKeyId", t.Name.Local):
@@ -103143,6 +104559,19 @@ func awsEc2query_deserializeOpDocumentCreateSnapshotOutput(v **CreateSnapshotOut
 			{
 				xtv := string(val)
 				sv.KmsKeyId = ptr.String(xtv)
+			}
+
+		case strings.EqualFold("outpostArn", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				sv.OutpostArn = ptr.String(xtv)
 			}
 
 		case strings.EqualFold("ownerAlias", t.Name.Local):
@@ -103273,7 +104702,7 @@ func awsEc2query_deserializeOpDocumentCreateSnapshotOutput(v **CreateSnapshotOut
 				if err != nil {
 					return err
 				}
-				sv.VolumeSize = int32(i64)
+				sv.VolumeSize = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -103358,6 +104787,55 @@ func awsEc2query_deserializeOpDocumentCreateSpotDatafeedSubscriptionOutput(v **C
 			nodeDecoder := smithyxml.WrapNodeDecoder(decoder.Decoder, t)
 			if err := awsEc2query_deserializeDocumentSpotDatafeedSubscription(&sv.SpotDatafeedSubscription, nodeDecoder); err != nil {
 				return err
+			}
+
+		default:
+			// Do nothing and ignore the unexpected tag element
+			err = decoder.Decoder.Skip()
+			if err != nil {
+				return err
+			}
+
+		}
+		decoder = originalDecoder
+	}
+	*v = sv
+	return nil
+}
+
+func awsEc2query_deserializeOpDocumentCreateStoreImageTaskOutput(v **CreateStoreImageTaskOutput, decoder smithyxml.NodeDecoder) error {
+	if v == nil {
+		return fmt.Errorf("unexpected nil of type %T", v)
+	}
+	var sv *CreateStoreImageTaskOutput
+	if *v == nil {
+		sv = &CreateStoreImageTaskOutput{}
+	} else {
+		sv = *v
+	}
+
+	for {
+		t, done, err := decoder.Token()
+		if err != nil {
+			return err
+		}
+		if done {
+			break
+		}
+		originalDecoder := decoder
+		decoder = smithyxml.WrapNodeDecoder(originalDecoder.Decoder, t)
+		switch {
+		case strings.EqualFold("objectKey", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				sv.ObjectKey = ptr.String(xtv)
 			}
 
 		default:
@@ -104085,7 +105563,7 @@ func awsEc2query_deserializeOpDocumentCreateVolumeOutput(v **CreateVolumeOutput,
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Encrypted = xtv
+				sv.Encrypted = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("fastRestored", t.Name.Local):
@@ -104101,7 +105579,7 @@ func awsEc2query_deserializeOpDocumentCreateVolumeOutput(v **CreateVolumeOutput,
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.FastRestored = xtv
+				sv.FastRestored = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("iops", t.Name.Local):
@@ -104118,7 +105596,7 @@ func awsEc2query_deserializeOpDocumentCreateVolumeOutput(v **CreateVolumeOutput,
 				if err != nil {
 					return err
 				}
-				sv.Iops = int32(i64)
+				sv.Iops = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("kmsKeyId", t.Name.Local):
@@ -104147,7 +105625,7 @@ func awsEc2query_deserializeOpDocumentCreateVolumeOutput(v **CreateVolumeOutput,
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.MultiAttachEnabled = xtv
+				sv.MultiAttachEnabled = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("outpostArn", t.Name.Local):
@@ -104177,7 +105655,7 @@ func awsEc2query_deserializeOpDocumentCreateVolumeOutput(v **CreateVolumeOutput,
 				if err != nil {
 					return err
 				}
-				sv.Size = int32(i64)
+				sv.Size = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("snapshotId", t.Name.Local):
@@ -104226,7 +105704,7 @@ func awsEc2query_deserializeOpDocumentCreateVolumeOutput(v **CreateVolumeOutput,
 				if err != nil {
 					return err
 				}
-				sv.Throughput = int32(i64)
+				sv.Throughput = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("volumeId", t.Name.Local):
@@ -104763,7 +106241,7 @@ func awsEc2query_deserializeOpDocumentDeleteEgressOnlyInternetGatewayOutput(v **
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.ReturnCode = xtv
+				sv.ReturnCode = ptr.Bool(xtv)
 			}
 
 		default:
@@ -104905,7 +106383,7 @@ func awsEc2query_deserializeOpDocumentDeleteFpgaImageOutput(v **DeleteFpgaImageO
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -105320,7 +106798,7 @@ func awsEc2query_deserializeOpDocumentDeleteNetworkInterfacePermissionOutput(v *
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -106120,7 +107598,7 @@ func awsEc2query_deserializeOpDocumentDeleteVpcPeeringConnectionOutput(v **Delet
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -106485,7 +107963,7 @@ func awsEc2query_deserializeOpDocumentDescribeAggregateIdFormatOutput(v **Descri
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.UseLongIdsAggregated = xtv
+				sv.UseLongIdsAggregated = ptr.Bool(xtv)
 			}
 
 		default:
@@ -107372,7 +108850,7 @@ func awsEc2query_deserializeOpDocumentDescribeElasticGpusOutput(v **DescribeElas
 				if err != nil {
 					return err
 				}
-				sv.MaxResults = int32(i64)
+				sv.MaxResults = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("nextToken", t.Name.Local):
@@ -110294,6 +111772,61 @@ func awsEc2query_deserializeOpDocumentDescribeRegionsOutput(v **DescribeRegionsO
 	return nil
 }
 
+func awsEc2query_deserializeOpDocumentDescribeReplaceRootVolumeTasksOutput(v **DescribeReplaceRootVolumeTasksOutput, decoder smithyxml.NodeDecoder) error {
+	if v == nil {
+		return fmt.Errorf("unexpected nil of type %T", v)
+	}
+	var sv *DescribeReplaceRootVolumeTasksOutput
+	if *v == nil {
+		sv = &DescribeReplaceRootVolumeTasksOutput{}
+	} else {
+		sv = *v
+	}
+
+	for {
+		t, done, err := decoder.Token()
+		if err != nil {
+			return err
+		}
+		if done {
+			break
+		}
+		originalDecoder := decoder
+		decoder = smithyxml.WrapNodeDecoder(originalDecoder.Decoder, t)
+		switch {
+		case strings.EqualFold("nextToken", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				sv.NextToken = ptr.String(xtv)
+			}
+
+		case strings.EqualFold("replaceRootVolumeTaskSet", t.Name.Local):
+			nodeDecoder := smithyxml.WrapNodeDecoder(decoder.Decoder, t)
+			if err := awsEc2query_deserializeDocumentReplaceRootVolumeTasks(&sv.ReplaceRootVolumeTasks, nodeDecoder); err != nil {
+				return err
+			}
+
+		default:
+			// Do nothing and ignore the unexpected tag element
+			err = decoder.Decoder.Skip()
+			if err != nil {
+				return err
+			}
+
+		}
+		decoder = originalDecoder
+	}
+	*v = sv
+	return nil
+}
+
 func awsEc2query_deserializeOpDocumentDescribeReservedInstancesListingsOutput(v **DescribeReservedInstancesListingsOutput, decoder smithyxml.NodeDecoder) error {
 	if v == nil {
 		return fmt.Errorf("unexpected nil of type %T", v)
@@ -111281,6 +112814,61 @@ func awsEc2query_deserializeOpDocumentDescribeStaleSecurityGroupsOutput(v **Desc
 		case strings.EqualFold("staleSecurityGroupSet", t.Name.Local):
 			nodeDecoder := smithyxml.WrapNodeDecoder(decoder.Decoder, t)
 			if err := awsEc2query_deserializeDocumentStaleSecurityGroupSet(&sv.StaleSecurityGroupSet, nodeDecoder); err != nil {
+				return err
+			}
+
+		default:
+			// Do nothing and ignore the unexpected tag element
+			err = decoder.Decoder.Skip()
+			if err != nil {
+				return err
+			}
+
+		}
+		decoder = originalDecoder
+	}
+	*v = sv
+	return nil
+}
+
+func awsEc2query_deserializeOpDocumentDescribeStoreImageTasksOutput(v **DescribeStoreImageTasksOutput, decoder smithyxml.NodeDecoder) error {
+	if v == nil {
+		return fmt.Errorf("unexpected nil of type %T", v)
+	}
+	var sv *DescribeStoreImageTasksOutput
+	if *v == nil {
+		sv = &DescribeStoreImageTasksOutput{}
+	} else {
+		sv = *v
+	}
+
+	for {
+		t, done, err := decoder.Token()
+		if err != nil {
+			return err
+		}
+		if done {
+			break
+		}
+		originalDecoder := decoder
+		decoder = smithyxml.WrapNodeDecoder(originalDecoder.Decoder, t)
+		switch {
+		case strings.EqualFold("nextToken", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				sv.NextToken = ptr.String(xtv)
+			}
+
+		case strings.EqualFold("storeImageTaskResultSet", t.Name.Local):
+			nodeDecoder := smithyxml.WrapNodeDecoder(decoder.Decoder, t)
+			if err := awsEc2query_deserializeDocumentStoreImageTaskResultSet(&sv.StoreImageTaskResults, nodeDecoder); err != nil {
 				return err
 			}
 
@@ -112962,7 +114550,7 @@ func awsEc2query_deserializeOpDocumentDetachClassicLinkVpcOutput(v **DetachClass
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -113031,7 +114619,7 @@ func awsEc2query_deserializeOpDocumentDetachVolumeOutput(v **DetachVolumeOutput,
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.DeleteOnTermination = xtv
+				sv.DeleteOnTermination = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("device", t.Name.Local):
@@ -113135,7 +114723,7 @@ func awsEc2query_deserializeOpDocumentDisableEbsEncryptionByDefaultOutput(v **Di
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.EbsEncryptionByDefault = xtv
+				sv.EbsEncryptionByDefault = ptr.Bool(xtv)
 			}
 
 		default:
@@ -113184,6 +114772,58 @@ func awsEc2query_deserializeOpDocumentDisableFastSnapshotRestoresOutput(v **Disa
 			nodeDecoder := smithyxml.WrapNodeDecoder(decoder.Decoder, t)
 			if err := awsEc2query_deserializeDocumentDisableFastSnapshotRestoreErrorSet(&sv.Unsuccessful, nodeDecoder); err != nil {
 				return err
+			}
+
+		default:
+			// Do nothing and ignore the unexpected tag element
+			err = decoder.Decoder.Skip()
+			if err != nil {
+				return err
+			}
+
+		}
+		decoder = originalDecoder
+	}
+	*v = sv
+	return nil
+}
+
+func awsEc2query_deserializeOpDocumentDisableSerialConsoleAccessOutput(v **DisableSerialConsoleAccessOutput, decoder smithyxml.NodeDecoder) error {
+	if v == nil {
+		return fmt.Errorf("unexpected nil of type %T", v)
+	}
+	var sv *DisableSerialConsoleAccessOutput
+	if *v == nil {
+		sv = &DisableSerialConsoleAccessOutput{}
+	} else {
+		sv = *v
+	}
+
+	for {
+		t, done, err := decoder.Token()
+		if err != nil {
+			return err
+		}
+		if done {
+			break
+		}
+		originalDecoder := decoder
+		decoder = smithyxml.WrapNodeDecoder(originalDecoder.Decoder, t)
+		switch {
+		case strings.EqualFold("serialConsoleAccessEnabled", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv, err := strconv.ParseBool(string(val))
+				if err != nil {
+					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
+				}
+				sv.SerialConsoleAccessEnabled = ptr.Bool(xtv)
 			}
 
 		default:
@@ -113277,7 +114917,7 @@ func awsEc2query_deserializeOpDocumentDisableVpcClassicLinkDnsSupportOutput(v **
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -113329,7 +114969,7 @@ func awsEc2query_deserializeOpDocumentDisableVpcClassicLinkOutput(v **DisableVpc
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -113436,7 +115076,7 @@ func awsEc2query_deserializeOpDocumentDisassociateEnclaveCertificateIamRoleOutpu
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -113730,7 +115370,7 @@ func awsEc2query_deserializeOpDocumentEnableEbsEncryptionByDefaultOutput(v **Ena
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.EbsEncryptionByDefault = xtv
+				sv.EbsEncryptionByDefault = ptr.Bool(xtv)
 			}
 
 		default:
@@ -113779,6 +115419,58 @@ func awsEc2query_deserializeOpDocumentEnableFastSnapshotRestoresOutput(v **Enabl
 			nodeDecoder := smithyxml.WrapNodeDecoder(decoder.Decoder, t)
 			if err := awsEc2query_deserializeDocumentEnableFastSnapshotRestoreErrorSet(&sv.Unsuccessful, nodeDecoder); err != nil {
 				return err
+			}
+
+		default:
+			// Do nothing and ignore the unexpected tag element
+			err = decoder.Decoder.Skip()
+			if err != nil {
+				return err
+			}
+
+		}
+		decoder = originalDecoder
+	}
+	*v = sv
+	return nil
+}
+
+func awsEc2query_deserializeOpDocumentEnableSerialConsoleAccessOutput(v **EnableSerialConsoleAccessOutput, decoder smithyxml.NodeDecoder) error {
+	if v == nil {
+		return fmt.Errorf("unexpected nil of type %T", v)
+	}
+	var sv *EnableSerialConsoleAccessOutput
+	if *v == nil {
+		sv = &EnableSerialConsoleAccessOutput{}
+	} else {
+		sv = *v
+	}
+
+	for {
+		t, done, err := decoder.Token()
+		if err != nil {
+			return err
+		}
+		if done {
+			break
+		}
+		originalDecoder := decoder
+		decoder = smithyxml.WrapNodeDecoder(originalDecoder.Decoder, t)
+		switch {
+		case strings.EqualFold("serialConsoleAccessEnabled", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv, err := strconv.ParseBool(string(val))
+				if err != nil {
+					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
+				}
+				sv.SerialConsoleAccessEnabled = ptr.Bool(xtv)
 			}
 
 		default:
@@ -113872,7 +115564,7 @@ func awsEc2query_deserializeOpDocumentEnableVpcClassicLinkDnsSupportOutput(v **E
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -113924,7 +115616,7 @@ func awsEc2query_deserializeOpDocumentEnableVpcClassicLinkOutput(v **EnableVpcCl
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -114379,7 +116071,7 @@ func awsEc2query_deserializeOpDocumentGetCapacityReservationUsageOutput(v **GetC
 				if err != nil {
 					return err
 				}
-				sv.AvailableInstanceCount = int32(i64)
+				sv.AvailableInstanceCount = ptr.Int32(int32(i64))
 			}
 
 		case strings.EqualFold("capacityReservationId", t.Name.Local):
@@ -114454,7 +116146,7 @@ func awsEc2query_deserializeOpDocumentGetCapacityReservationUsageOutput(v **GetC
 				if err != nil {
 					return err
 				}
-				sv.TotalInstanceCount = int32(i64)
+				sv.TotalInstanceCount = ptr.Int32(int32(i64))
 			}
 
 		default:
@@ -114806,7 +116498,56 @@ func awsEc2query_deserializeOpDocumentGetEbsEncryptionByDefaultOutput(v **GetEbs
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.EbsEncryptionByDefault = xtv
+				sv.EbsEncryptionByDefault = ptr.Bool(xtv)
+			}
+
+		default:
+			// Do nothing and ignore the unexpected tag element
+			err = decoder.Decoder.Skip()
+			if err != nil {
+				return err
+			}
+
+		}
+		decoder = originalDecoder
+	}
+	*v = sv
+	return nil
+}
+
+func awsEc2query_deserializeOpDocumentGetFlowLogsIntegrationTemplateOutput(v **GetFlowLogsIntegrationTemplateOutput, decoder smithyxml.NodeDecoder) error {
+	if v == nil {
+		return fmt.Errorf("unexpected nil of type %T", v)
+	}
+	var sv *GetFlowLogsIntegrationTemplateOutput
+	if *v == nil {
+		sv = &GetFlowLogsIntegrationTemplateOutput{}
+	} else {
+		sv = *v
+	}
+
+	for {
+		t, done, err := decoder.Token()
+		if err != nil {
+			return err
+		}
+		if done {
+			break
+		}
+		originalDecoder := decoder
+		decoder = smithyxml.WrapNodeDecoder(originalDecoder.Decoder, t)
+		switch {
+		case strings.EqualFold("result", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv := string(val)
+				sv.Result = ptr.String(xtv)
 			}
 
 		default:
@@ -115238,7 +116979,7 @@ func awsEc2query_deserializeOpDocumentGetReservedInstancesExchangeQuoteOutput(v 
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.IsValidExchange = xtv
+				sv.IsValidExchange = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("outputReservedInstancesWillExpireAt", t.Name.Local):
@@ -115306,6 +117047,58 @@ func awsEc2query_deserializeOpDocumentGetReservedInstancesExchangeQuoteOutput(v 
 			{
 				xtv := string(val)
 				sv.ValidationFailureReason = ptr.String(xtv)
+			}
+
+		default:
+			// Do nothing and ignore the unexpected tag element
+			err = decoder.Decoder.Skip()
+			if err != nil {
+				return err
+			}
+
+		}
+		decoder = originalDecoder
+	}
+	*v = sv
+	return nil
+}
+
+func awsEc2query_deserializeOpDocumentGetSerialConsoleAccessStatusOutput(v **GetSerialConsoleAccessStatusOutput, decoder smithyxml.NodeDecoder) error {
+	if v == nil {
+		return fmt.Errorf("unexpected nil of type %T", v)
+	}
+	var sv *GetSerialConsoleAccessStatusOutput
+	if *v == nil {
+		sv = &GetSerialConsoleAccessStatusOutput{}
+	} else {
+		sv = *v
+	}
+
+	for {
+		t, done, err := decoder.Token()
+		if err != nil {
+			return err
+		}
+		if done {
+			break
+		}
+		originalDecoder := decoder
+		decoder = smithyxml.WrapNodeDecoder(originalDecoder.Decoder, t)
+		switch {
+		case strings.EqualFold("serialConsoleAccessEnabled", t.Name.Local):
+			val, err := decoder.Value()
+			if err != nil {
+				return err
+			}
+			if val == nil {
+				break
+			}
+			{
+				xtv, err := strconv.ParseBool(string(val))
+				if err != nil {
+					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
+				}
+				sv.SerialConsoleAccessEnabled = ptr.Bool(xtv)
 			}
 
 		default:
@@ -115632,7 +117425,7 @@ func awsEc2query_deserializeOpDocumentImportClientVpnClientCertificateRevocation
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -115710,7 +117503,7 @@ func awsEc2query_deserializeOpDocumentImportImageOutput(v **ImportImageOutput, d
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Encrypted = xtv
+				sv.Encrypted = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("hypervisor", t.Name.Local):
@@ -116178,7 +117971,7 @@ func awsEc2query_deserializeOpDocumentModifyAvailabilityZoneGroupOutput(v **Modi
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -116230,7 +118023,7 @@ func awsEc2query_deserializeOpDocumentModifyCapacityReservationOutput(v **Modify
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -116282,7 +118075,7 @@ func awsEc2query_deserializeOpDocumentModifyClientVpnEndpointOutput(v **ModifyCl
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -116425,7 +118218,7 @@ func awsEc2query_deserializeOpDocumentModifyFleetOutput(v **ModifyFleetOutput, d
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -116567,7 +118360,7 @@ func awsEc2query_deserializeOpDocumentModifyInstanceCapacityReservationAttribute
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -116764,7 +118557,7 @@ func awsEc2query_deserializeOpDocumentModifyInstancePlacementOutput(v **ModifyIn
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -116949,7 +118742,7 @@ func awsEc2query_deserializeOpDocumentModifySpotFleetRequestOutput(v **ModifySpo
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -117295,7 +119088,7 @@ func awsEc2query_deserializeOpDocumentModifyVpcEndpointConnectionNotificationOut
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.ReturnValue = xtv
+				sv.ReturnValue = ptr.Bool(xtv)
 			}
 
 		default:
@@ -117347,7 +119140,7 @@ func awsEc2query_deserializeOpDocumentModifyVpcEndpointOutput(v **ModifyVpcEndpo
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -117399,7 +119192,7 @@ func awsEc2query_deserializeOpDocumentModifyVpcEndpointServiceConfigurationOutpu
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -117451,7 +119244,7 @@ func awsEc2query_deserializeOpDocumentModifyVpcEndpointServicePermissionsOutput(
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.ReturnValue = xtv
+				sv.ReturnValue = ptr.Bool(xtv)
 			}
 
 		default:
@@ -117551,7 +119344,7 @@ func awsEc2query_deserializeOpDocumentModifyVpcTenancyOutput(v **ModifyVpcTenanc
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.ReturnValue = xtv
+				sv.ReturnValue = ptr.Bool(xtv)
 			}
 
 		default:
@@ -118445,7 +120238,7 @@ func awsEc2query_deserializeOpDocumentRejectVpcPeeringConnectionOutput(v **Rejec
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -118915,7 +120708,7 @@ func awsEc2query_deserializeOpDocumentResetFpgaImageAttributeOutput(v **ResetFpg
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -119113,7 +120906,7 @@ func awsEc2query_deserializeOpDocumentRevokeSecurityGroupEgressOutput(v **Revoke
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("unknownIpPermissionSet", t.Name.Local):
@@ -119171,7 +120964,7 @@ func awsEc2query_deserializeOpDocumentRevokeSecurityGroupIngressOutput(v **Revok
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("unknownIpPermissionSet", t.Name.Local):
@@ -119468,7 +121261,7 @@ func awsEc2query_deserializeOpDocumentSearchTransitGatewayRoutesOutput(v **Searc
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.AdditionalRoutesAvailable = xtv
+				sv.AdditionalRoutesAvailable = ptr.Bool(xtv)
 			}
 
 		case strings.EqualFold("routeSet", t.Name.Local):
@@ -119610,7 +121403,7 @@ func awsEc2query_deserializeOpDocumentStartVpcEndpointServicePrivateDnsVerificat
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.ReturnValue = xtv
+				sv.ReturnValue = ptr.Bool(xtv)
 			}
 
 		default:
@@ -119911,7 +121704,7 @@ func awsEc2query_deserializeOpDocumentUpdateSecurityGroupRuleDescriptionsEgressO
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:
@@ -119963,7 +121756,7 @@ func awsEc2query_deserializeOpDocumentUpdateSecurityGroupRuleDescriptionsIngress
 				if err != nil {
 					return fmt.Errorf("expected Boolean to be of type *bool, got %T instead", val)
 				}
-				sv.Return = xtv
+				sv.Return = ptr.Bool(xtv)
 			}
 
 		default:

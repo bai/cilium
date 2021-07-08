@@ -1,4 +1,4 @@
-// Copyright 2019-2020 Authors of Cilium
+// Copyright 2019-2021 Authors of Cilium
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ package loader
 
 import (
 	"fmt"
-	"reflect"
+	"net"
 
 	"github.com/cilium/cilium/pkg/addressing"
 	"github.com/cilium/cilium/pkg/bpf"
@@ -46,6 +46,7 @@ var (
 	elfMapPrefixes = []string{
 		policymap.MapName,
 		callsmap.MapName,
+		callsmap.CustomCallsMapName,
 	}
 	elfCtMapPrefixes = []string{
 		ctmap.MapNameTCP4,
@@ -160,6 +161,11 @@ func elfMapSubstitutions(ep datapath.Endpoint) map[string]string {
 		if ep.IsHost() && name == callsmap.MapName {
 			name = callsmap.HostMapName
 		}
+		// Custom calls for hosts are not supported yet.
+		if name == callsmap.CustomCallsMapName &&
+			(!option.Config.EnableCustomCalls || ep.IsHost()) {
+			continue
+		}
 		templateStr := bpf.LocalMapName(name, templateLxcID)
 		desiredStr := bpf.LocalMapName(name, epID)
 		result[templateStr] = desiredStr
@@ -172,9 +178,13 @@ func elfMapSubstitutions(ep datapath.Endpoint) map[string]string {
 		}
 	}
 
-	if !ep.IsHost() {
+	// The policy map is only used for the host endpoint is per-endpoint
+	// routes and the host firewall are enabled.
+	if !ep.IsHost() ||
+		(option.Config.EnableEndpointRoutes && option.Config.EnableHostFirewall) {
 		result[policymap.CallString(templateLxcID)] = policymap.CallString(epID)
 	}
+
 	return result
 }
 
@@ -187,7 +197,7 @@ func sliceToU16(input []byte) uint16 {
 
 // sliceToBe16 converts the input slice of two bytes to a big-endian uint16.
 func sliceToBe16(input []byte) uint16 {
-	return byteorder.HostToNetwork(sliceToU16(input)).(uint16)
+	return byteorder.HostToNetwork16(sliceToU16(input))
 }
 
 // sliceToU32 converts the input slice of four bytes to a uint32.
@@ -201,7 +211,7 @@ func sliceToU32(input []byte) uint32 {
 
 // sliceToBe32 converts the input slice of four bytes to a big-endian uint32.
 func sliceToBe32(input []byte) uint32 {
-	return byteorder.HostToNetwork(sliceToU32(input)).(uint32)
+	return byteorder.HostToNetwork32(sliceToU32(input))
 }
 
 // elfVariableSubstitutions returns the set of data substitutions that must
@@ -218,7 +228,7 @@ func elfVariableSubstitutions(ep datapath.Endpoint) map[string]uint32 {
 		result["LXC_IP_4"] = sliceToBe32(ipv6[12:16])
 	}
 	if ipv4 := ep.IPv4Address(); ipv4 != nil {
-		result["LXC_IPV4"] = byteorder.HostSliceToNetwork(ipv4, reflect.Uint32).(uint32)
+		result["LXC_IPV4"] = byteorder.NetIPv4ToHost32(net.IP(ipv4))
 	}
 
 	mac := ep.GetNodeMAC()
@@ -235,14 +245,13 @@ func elfVariableSubstitutions(ep datapath.Endpoint) map[string]uint32 {
 			}
 		}
 		result["SECCTX_FROM_IPCACHE"] = uint32(SecctxFromIpcacheDisabled)
-		result["HOST_EP_ID"] = uint32(ep.GetID())
 	} else {
 		result["LXC_ID"] = uint32(ep.GetID())
 	}
 
 	identity := ep.GetIdentity().Uint32()
 	result["SECLABEL"] = identity
-	result["SECLABEL_NB"] = byteorder.HostToNetwork(identity).(uint32)
+	result["SECLABEL_NB"] = byteorder.HostToNetwork32(identity)
 	result["POLICY_VERDICT_LOG_FILTER"] = ep.GetPolicyVerdictLogFilter()
 	return result
 

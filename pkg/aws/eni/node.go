@@ -20,10 +20,13 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/aws/smithy-go"
+	"github.com/cilium/cilium/operator/option"
 	"github.com/cilium/cilium/pkg/aws/eni/limits"
 	eniTypes "github.com/cilium/cilium/pkg/aws/eni/types"
+	"github.com/cilium/cilium/pkg/defaults"
 	"github.com/cilium/cilium/pkg/ipam"
 	ipamTypes "github.com/cilium/cilium/pkg/ipam/types"
 	v2 "github.com/cilium/cilium/pkg/k8s/apis/cilium.io/v2"
@@ -208,7 +211,9 @@ func (n *Node) PrepareIPAllocation(scopedLog *logrus.Entry) (a *ipam.AllocationA
 			continue
 		}
 
-		availableOnENI := math.IntMax(limits.IPv4-len(e.Addresses), 0)
+		// The limits include the primary IP, so we need to take it into account
+		// when computing the amount of available addresses on the ENI.
+		availableOnENI := math.IntMax(limits.IPv4-len(e.Addresses)-1, 0)
 		if availableOnENI <= 0 {
 			continue
 		} else {
@@ -357,14 +362,21 @@ func (n *Node) CreateInterface(ctx context.Context, allocation *ipam.AllocationA
 	resource := *n.k8sObj
 	n.mutex.RUnlock()
 
-	bestSubnet := n.manager.FindSubnetByTags(resource.Spec.ENI.VpcID, resource.Spec.ENI.AvailabilityZone, resource.Spec.ENI.SubnetTags)
+	var bestSubnet *ipamTypes.Subnet
+	if len(resource.Spec.ENI.SubnetIDs) > 0 {
+		bestSubnet = n.manager.FindSubnetByIDs(resource.Spec.ENI.VpcID, resource.Spec.ENI.AvailabilityZone, resource.Spec.ENI.SubnetIDs)
+	} else {
+		bestSubnet = n.manager.FindSubnetByTags(resource.Spec.ENI.VpcID, resource.Spec.ENI.AvailabilityZone, resource.Spec.ENI.SubnetTags)
+	}
+
 	if bestSubnet == nil {
 		return 0,
 			errUnableToFindSubnet,
 			fmt.Errorf(
-				"No matching subnet available for interface creation (VPC=%s AZ=%s SubnetTags=%s",
+				"No matching subnet available for interface creation (VPC=%s AZ=%s SubnetIDs=%v SubnetTags=%s)",
 				resource.Spec.ENI.VpcID,
 				resource.Spec.ENI.AvailabilityZone,
+				resource.Spec.ENI.SubnetIDs,
 				resource.Spec.ENI.SubnetTags,
 			)
 	}
@@ -548,6 +560,69 @@ func (n *Node) GetMaximumAllocatableIPv4() int {
 		return 0
 	}
 
+	// limits.IPv4 contains the primary IP which is not available for allocation
+	maxPerInterface := math.IntMax(limits.IPv4-1, 0)
+
 	// Return the maximum amount of IP addresses allocatable on the instance
-	return (limits.Adapters - firstInterfaceIndex) * limits.IPv4
+	return (limits.Adapters - firstInterfaceIndex) * maxPerInterface
+}
+
+var adviseOperatorFlagOnce sync.Once
+
+// GetMinimumAllocatableIPv4 returns the minimum amount of IPv4 addresses that
+// must be allocated to the instance.
+func (n *Node) GetMinimumAllocatableIPv4() int {
+	n.mutex.RLock()
+	defer n.mutex.RUnlock()
+
+	minimum := defaults.IPAMPreAllocation
+
+	if n.k8sObj == nil || n.k8sObj.Spec.ENI.FirstInterfaceIndex == nil {
+		n.loggerLocked().WithFields(logrus.Fields{
+			"adaptors-limit": "unknown",
+			"pre-allocate":   minimum,
+		}).Warning("Could not determine first-interface-index, falling back to default pre-allocate value")
+		return minimum
+	}
+
+	index := *n.k8sObj.Spec.ENI.FirstInterfaceIndex
+
+	// In ENI mode, we must adjust the PreAllocate value based on the instance
+	// type. An adjustment is necessary when the number of possible IPs
+	// corresponding to the instance type limit is smaller than the default
+	// PreAllocate value. Otherwise, we fallback to the default PreAllocate.
+	//
+	// If we don't adjust the PreAllocate value, then it would be impossible to
+	// allocate IPs for smaller instance types because the PreAllocate would
+	// exceed the maximum possible number of IPs per instance.
+
+	limits, limitsAvailable := n.getLimitsLocked()
+	if !limitsAvailable {
+		adviseOperatorFlagOnce.Do(func() {
+			n.loggerLocked().WithFields(logrus.Fields{
+				"instance-type": n.k8sObj.Spec.ENI.InstanceType,
+			}).Warningf(
+				"Unable to find limits for instance type, consider setting --%s=true on the Operator",
+				option.UpdateEC2AdapterLimitViaAPI,
+			)
+		})
+
+		n.loggerLocked().WithFields(logrus.Fields{
+			"adaptors-limit":        "unknown",
+			"first-interface-index": index,
+			"pre-allocate":          minimum,
+		}).Warning("Could not determine instance limits, falling back to default pre-allocate value")
+		return minimum
+	}
+
+	// We cannot allocate any IPs if this is the case because all the ENIs will
+	// be skipped.
+	if index >= limits.Adapters {
+		return 0
+	}
+
+	// limits.IPv4 contains the primary IP which is not available for allocation
+	maxPerInterface := math.IntMax(limits.IPv4-1, 0)
+
+	return math.IntMin(minimum, (limits.Adapters-index)*maxPerInterface)
 }

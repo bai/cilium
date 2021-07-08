@@ -45,7 +45,7 @@ type DescribePublicIpv4PoolsInput struct {
 
 	// The maximum number of results to return with a single call. To retrieve the
 	// remaining results, make another call with the returned nextToken value.
-	MaxResults int32
+	MaxResults *int32
 
 	// The token for the next page of results.
 	NextToken *string
@@ -159,17 +159,17 @@ type DescribePublicIpv4PoolsPaginator struct {
 // NewDescribePublicIpv4PoolsPaginator returns a new
 // DescribePublicIpv4PoolsPaginator
 func NewDescribePublicIpv4PoolsPaginator(client DescribePublicIpv4PoolsAPIClient, params *DescribePublicIpv4PoolsInput, optFns ...func(*DescribePublicIpv4PoolsPaginatorOptions)) *DescribePublicIpv4PoolsPaginator {
+	if params == nil {
+		params = &DescribePublicIpv4PoolsInput{}
+	}
+
 	options := DescribePublicIpv4PoolsPaginatorOptions{}
-	if params.MaxResults != 0 {
-		options.Limit = params.MaxResults
+	if params.MaxResults != nil {
+		options.Limit = *params.MaxResults
 	}
 
 	for _, fn := range optFns {
 		fn(&options)
-	}
-
-	if params == nil {
-		params = &DescribePublicIpv4PoolsInput{}
 	}
 
 	return &DescribePublicIpv4PoolsPaginator{
@@ -194,7 +194,11 @@ func (p *DescribePublicIpv4PoolsPaginator) NextPage(ctx context.Context, optFns 
 	params := *p.params
 	params.NextToken = p.nextToken
 
-	params.MaxResults = p.options.Limit
+	var limit *int32
+	if p.options.Limit > 0 {
+		limit = &p.options.Limit
+	}
+	params.MaxResults = limit
 
 	result, err := p.client.DescribePublicIpv4Pools(ctx, &params, optFns...)
 	if err != nil {

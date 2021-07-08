@@ -41,14 +41,14 @@ type GetCapacityReservationUsageInput struct {
 	// actually making the request, and provides an error response. If you have the
 	// required permissions, the error response is DryRunOperation. Otherwise, it is
 	// UnauthorizedOperation.
-	DryRun bool
+	DryRun *bool
 
 	// The maximum number of results to return for the request in a single page. The
 	// remaining results can be seen by sending another request with the returned
 	// nextToken value. This value can be between 5 and 500. If maxResults is given a
 	// larger value than 500, you receive an error. Valid range: Minimum value of 1.
 	// Maximum value of 1000.
-	MaxResults int32
+	MaxResults *int32
 
 	// The token to use to retrieve the next page of results.
 	NextToken *string
@@ -58,7 +58,7 @@ type GetCapacityReservationUsageOutput struct {
 
 	// The remaining capacity. Indicates the number of instances that can be launched
 	// in the Capacity Reservation.
-	AvailableInstanceCount int32
+	AvailableInstanceCount *int32
 
 	// The ID of the Capacity Reservation.
 	CapacityReservationId *string
@@ -84,20 +84,20 @@ type GetCapacityReservationUsageOutput struct {
 	// reserved capacity is no longer available for your use.
 	//
 	// * cancelled - The
-	// Capacity Reservation was manually cancelled. The reserved capacity is no longer
-	// available for your use.
+	// Capacity Reservation was cancelled. The reserved capacity is no longer available
+	// for your use.
 	//
-	// * pending - The Capacity Reservation request was
-	// successful but the capacity provisioning is still pending.
+	// * pending - The Capacity Reservation request was successful but
+	// the capacity provisioning is still pending.
 	//
-	// * failed - The
-	// Capacity Reservation request has failed. A request might fail due to invalid
-	// request parameters, capacity constraints, or instance limit constraints. Failed
-	// requests are retained for 60 minutes.
+	// * failed - The Capacity Reservation
+	// request has failed. A request might fail due to invalid request parameters,
+	// capacity constraints, or instance limit constraints. Failed requests are
+	// retained for 60 minutes.
 	State types.CapacityReservationState
 
 	// The number of instances for which the Capacity Reservation reserves capacity.
-	TotalInstanceCount int32
+	TotalInstanceCount *int32
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata

@@ -11,7 +11,7 @@ import (
 )
 
 // Enables EBS encryption by default for your account in the current Region. After
-// you enable encryption by default, the EBS volumes that you create are are always
+// you enable encryption by default, the EBS volumes that you create are always
 // encrypted, either using the default CMK or the CMK that you specified when you
 // created each volume. For more information, see Amazon EBS encryption
 // (https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/EBSEncryption.html) in the
@@ -43,13 +43,13 @@ type EnableEbsEncryptionByDefaultInput struct {
 	// actually making the request, and provides an error response. If you have the
 	// required permissions, the error response is DryRunOperation. Otherwise, it is
 	// UnauthorizedOperation.
-	DryRun bool
+	DryRun *bool
 }
 
 type EnableEbsEncryptionByDefaultOutput struct {
 
 	// The updated status of encryption by default.
-	EbsEncryptionByDefault bool
+	EbsEncryptionByDefault *bool
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata

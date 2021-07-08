@@ -74,6 +74,62 @@ Configuration
   additional information how to install and run Prometheus including the
   Grafana dashboard.
 
+Custom ENI Configuration
+========================
+
+Custom ENI configuration can be defined with a custom CNI configuration
+``ConfigMap``:
+
+Create a CNI configuration
+--------------------------
+
+Create a ``cni-config.yaml`` file based on the template below. Fill in the
+``subnet-tags`` field, assuming that the subnets in AWS have the tags applied
+to them:
+
+.. code-block:: yaml
+
+   apiVersion: v1
+   kind: ConfigMap
+   metadata:
+     name: cni-configuration
+     namespace: kube-system
+   data:
+     cni-config: |-
+       {
+         "cniVersion":"0.3.1",
+         "name":"cilium",
+         "plugins": [
+           {
+             "cniVersion":"0.3.1",
+             "type":"cilium-cni",
+             "eni": {
+               "subnet-tags":{
+                 "foo":"true"
+               }
+             }
+           }
+         ]
+       }
+
+Deploy the ``ConfigMap``:
+
+.. code-block:: shell-session
+
+   kubectl apply -f cni-config.yaml
+
+Configure Cilium with subnet-tags-filter
+----------------------------------------
+
+Using the instructions above to deploy Cilium, specify the following additional
+arguments to Helm:
+
+.. code-block:: shell-session
+
+   --set cni.customConf=true \
+   --set cni.configMap=cni-configuration \
+   --set eni.subnetTagsFilter="foo=true"
+
 ENI Allocation Parameters
 =========================
 
@@ -131,7 +187,7 @@ allocation:
 
 ``spec.eni.first-interface-index``
   The index of the first ENI to use for IP allocation, e.g. if the node has
-  ``eth0``, ``eth1``, ``eth2`` and FirstInterfaceIndex is set to 1, then only
+  ``eth0``, ``eth1``, ``eth2`` and FirstInterfaceIndex is set to 0, then only
   ``eth1`` and ``eth2`` will be used for IP allocation, ``eth0`` will be
   ignored for PodIP allocation.
 
@@ -150,6 +206,15 @@ allocation:
   and attached to the instance.
 
   If unspecified, the security group ids of ``eth0`` will be used.
+
+``spec.eni.subnet-ids``
+  The subnet IDs used to select the AWS subnets for IP allocation. This is an
+  additional requirement on top of requiring to match the availability zone and
+  VPC of the instance. This parameter is mutually exclusive and has priority over
+  ``spec.eni.subnet-tags``.
+
+  If unspecified, it will let the operator pick any available subnet in the AZ 
+  with the most IP addresses available.
 
 ``spec.eni.subnet-tags``
   The tags used to select the AWS subnets for IP allocation. This is an
@@ -394,3 +459,42 @@ Metrics
 *******
 
 The IPAM metrics are documented in the section :ref:`ipam_metrics`.
+
+******************
+Node Configuration
+******************
+
+The IP address and routes on ENIs attached to the instance will be
+managed by the Cilium agent. Therefore, any system service trying to manage
+newly attached network interfaces will interfere with Cilium's configuration.
+Common scenarios are ``NetworkManager`` or ``systemd-networkd`` automatically
+performing DHCP on these interfaces or removing Cilium's IP address when the
+carrier is temporarily lost. Be sure to disable these services or configure
+your Linux distribution to not manage the newly attached ENI devices.
+The following examples configure all Linux network devices named ``eth*``
+except ``eth0`` as unmanaged.
+
+.. tabs::
+
+   .. group-tab:: Network Manager
+
+        .. code-block:: shell-session
+
+            # cat <<EOF >/etc/NetworkManager/conf.d/99-unmanaged-devices.conf
+            [keyfile]
+            unmanaged-devices=interface-name:eth*,except:interface-name:eth0
+            EOF
+            # systemctl reload NetworkManager
+
+   .. group-tab:: systemd-networkd
+
+        .. code-block:: shell-session
+
+            # cat <<EOF >/etc/systemd/network/99-unmanaged-devices.network
+            [Match]
+            Name=eth[1-9]*
+
+            [Link]
+            Unmanaged=yes
+            EOF
+            # systemctl restart systemd-networkd

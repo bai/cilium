@@ -60,19 +60,8 @@ Then, install Cilium release via Helm:
    to be disabled (e.g. by setting the kernel ``cgroup_no_v1="all"`` parameter).
 
 .. include:: k8s-install-validate.rst
-.. include:: namespace-kube-system.rst
-.. include:: hubble-enable.rst
 
-Next steps
-==========
-
-Now that you have a Kubernetes cluster with Cilium up and running, you can take
-a couple of next steps to explore various capabilities:
-
-* :ref:`gs_http`
-* :ref:`gs_dns`
-* :ref:`gs_cassandra`
-* :ref:`gs_kafka`
+.. include:: next-steps.rst
 
 Troubleshooting
 ===============
@@ -93,6 +82,24 @@ and no longer routing api-server requests to the current ``kind-control-plane`` 
 Recreating the kind cluster and using the helm command :ref:`kind_install_cilium` will detach the
 inaccurate eBPF programs.
 
+Crashing Cilium agent pods
+--------------------------
+
+Check if Cilium agent pods are crashing with following logs. This may indicate
+that you are deploying a kind cluster in an environment where Cilium is already
+running (for example, in the Cilium development VM). This can also happen if you
+have other overlapping BPF ``cgroup`` type programs attached to the parent ``cgroup``
+hierarchy of the kind container nodes. In such cases, either tear down Cilium, or manually
+detach the overlapping BPF ``cgroup`` programs running in the parent ``cgroup`` hierarchy
+by following the `bpftool documentation <https://manpages.ubuntu.com/manpages/focal/man8/bpftool-cgroup.8.html>`_.
+For more information, see the `Pull Request <https://github.com/cilium/cilium/pull/16259>`__.
+
+::
+
+    level=warning msg="+ bpftool cgroup attach /var/run/cilium/cgroupv2 connect6 pinned /sys/fs/bpf/tc/globals/cilium_cgroups_connect6" subsys=datapath-loader
+    level=warning msg="Error: failed to attach program" subsys=datapath-loader
+    level=warning msg="+ RETCODE=255" subsys=datapath-loader
+
 .. _gs_kind_cluster_mesh:
 
 Cluster Mesh
@@ -108,7 +115,7 @@ We will explicitly configure their ``pod-network-cidr`` and ``service-cidr`` to 
 
 Example ``kind-cluster1.yaml``:
 
-.. code:: yaml
+.. code-block:: yaml
 
     kind: Cluster
     apiVersion: kind.x-k8s.io/v1alpha4
@@ -124,7 +131,7 @@ Example ``kind-cluster1.yaml``:
 
 Example ``kind-cluster2.yaml``:
 
-.. code:: yaml
+.. code-block:: yaml
 
     kind: Cluster
     apiVersion: kind.x-k8s.io/v1alpha4
@@ -143,7 +150,7 @@ Create Kind Clusters
 
 We can now create the respective clusters:
 
-.. code:: bash
+.. code-block:: shell-session
 
     kind create cluster --name=cluster1 --config=kind-cluster1.yaml
     kind create cluster --name=cluster2 --config=kind-cluster2.yaml
@@ -157,7 +164,7 @@ we're enabling managed etcd and setting both ``cluster-name`` and
 
 Make sure context is set to ``kind-cluster2`` cluster.
 
-.. code:: bash
+.. code-block:: shell-session
 
    kubectl config use-context kind-cluster2
 
@@ -171,15 +178,12 @@ Make sure context is set to ``kind-cluster2`` cluster.
       --set externalIPs.enabled=true \\
       --set nodePort.enabled=true \\
       --set hostPort.enabled=true \\
-      --set etcd.enabled=true \\
-      --set etcd.managed=true \\
-      --set identityAllocationMode=kvstore \\
       --set cluster.name=cluster2 \\
       --set cluster.id=2
 
 Change the kubectl context to ``kind-cluster1`` cluster:
 
-.. code:: bash
+.. code-block:: shell-session
 
    kubectl config use-context kind-cluster1
 
@@ -193,14 +197,11 @@ Change the kubectl context to ``kind-cluster1`` cluster:
       --set externalIPs.enabled=true \\
       --set nodePort.enabled=true \\
       --set hostPort.enabled=true \\
-      --set etcd.enabled=true \\
-      --set etcd.managed=true \\
-      --set identityAllocationMode=kvstore \\
       --set cluster.name=cluster1 \\
       --set cluster.id=1
 
 Setting up Cluster Mesh
 ------------------------
 
-We can complete setup by following the Cluster Mesh guide with :ref:`gs_clustermesh_expose_etcd`.
+We can complete setup by following the Cluster Mesh guide with :ref:`gs_clustermesh`.
 For Kind, we'll want to deploy the ``NodePort`` service into the ``kube-system`` namespace.

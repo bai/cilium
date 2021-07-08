@@ -98,7 +98,7 @@ var _ = skipSuite("K8sKubeProxyFreeMatrix tests", func() {
 	}
 
 	BeforeAll(func() {
-		if !helpers.RunsOnNetNextOr419Kernel() {
+		if !helpers.RunsOn419OrLaterKernel() {
 			return
 		}
 		kubectl = helpers.CreateKubectl(helpers.K8s1VMName(), logger)
@@ -120,8 +120,8 @@ var _ = skipSuite("K8sKubeProxyFreeMatrix tests", func() {
 
 		podNode1 = getPodName("id=app1")
 		podNode2 = getPodName("id=app3")
-		hostNetworkPodNode1 = getPodNodeName(helpers.K8s1, "-l id=host-client")
-		hostNetworkPodNode2 = getPodNodeName(helpers.K8s2, "-l id=host-client")
+		hostNetworkPodNode1 = getPodNodeName(helpers.K8s1, "id=host-client")
+		hostNetworkPodNode2 = getPodNodeName(helpers.K8s2, "id=host-client")
 
 		// map the public and private ip addresses of k8s1. We need to do this
 		// since the public and private IP addresses are also ephemeral across
@@ -178,14 +178,14 @@ var _ = skipSuite("K8sKubeProxyFreeMatrix tests", func() {
 	})
 
 	AfterFailed(func() {
-		if !helpers.RunsOnNetNextOr419Kernel() {
+		if !helpers.RunsOn419OrLaterKernel() {
 			return
 		}
 		kubectl.CiliumReport("cilium service list", "cilium endpoint list")
 	})
 
 	AfterAll(func() {
-		if !helpers.RunsOnNetNextOr419Kernel() {
+		if !helpers.RunsOn419OrLaterKernel() {
 			return
 		}
 
@@ -239,7 +239,7 @@ var _ = skipSuite("K8sKubeProxyFreeMatrix tests", func() {
 	}
 
 	SkipContextIf(
-		func() bool { return helpers.DoesNotRunOnNetNextOr419Kernel() },
+		func() bool { return helpers.DoesNotRunOn419OrLaterKernel() },
 		"DirectRouting", func() {
 			BeforeAll(func() {
 				deployCilium(map[string]string{
@@ -285,7 +285,7 @@ var _ = skipSuite("K8sKubeProxyFreeMatrix tests", func() {
 	)
 
 	SkipContextIf(
-		func() bool { return helpers.DoesNotRunOnNetNextOr419Kernel() },
+		func() bool { return helpers.DoesNotRunOn419OrLaterKernel() },
 		"VxLANMode", func() {
 			BeforeAll(func() {
 				deployCilium(map[string]string{

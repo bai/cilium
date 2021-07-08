@@ -39,14 +39,14 @@ func Test(t *testing.T) {
 
 func (s *IPTestSuite) TestCountIPs(c *C) {
 	tests := map[string]*big.Int{
-		"192.168.0.1/32": big.NewInt(1),
-		"192.168.0.1/31": big.NewInt(1),
-		"192.168.0.1/30": big.NewInt(3),
-		"192.168.0.1/24": big.NewInt(255),
-		"192.168.0.1/16": big.NewInt(65535),
-		"::1/128":        big.NewInt(1),
-		"::1/120":        big.NewInt(255),
-		"fd02:1::/32":    big.NewInt(0).Sub(big.NewInt(2).Exp(big.NewInt(2), big.NewInt(96), nil), big.NewInt(1)),
+		"192.168.0.1/32": big.NewInt(0),
+		"192.168.0.1/31": big.NewInt(0).Sub(big.NewInt(1), big.NewInt(1)),
+		"192.168.0.1/30": big.NewInt(2),
+		"192.168.0.1/24": big.NewInt(254),
+		"192.168.0.1/16": big.NewInt(65534),
+		"::1/128":        big.NewInt(0),
+		"::1/120":        big.NewInt(254),
+		"fd02:1::/32":    big.NewInt(0).Sub(big.NewInt(2).Exp(big.NewInt(2), big.NewInt(96), nil), big.NewInt(2)),
 	}
 	for cidr, nIPs := range tests {
 		_, ipnet, err := net.ParseCIDR(cidr)
@@ -784,39 +784,144 @@ func (s *IPTestSuite) BenchmarkKeepUniqueIPs(c *C) {
 	}
 }
 
-func (s *IPTestSuite) TestIsIPv4(c *C) {
+func (s *IPTestSuite) TestIPVersion(c *C) {
 	type args struct {
 		ip net.IP
 	}
 	tests := []struct {
 		name string
 		args args
-		want bool
+		v4   bool
+		v6   bool
 	}{
 		{
 			name: "test-1",
 			args: args{
 				ip: nil,
 			},
-			want: false,
+			v4: false,
+			v6: false,
 		},
 		{
 			name: "test-2",
 			args: args{
 				ip: net.ParseIP("1.1.1.1"),
 			},
-			want: true,
+			v4: true,
+			v6: false,
 		},
 		{
 			name: "test-3",
 			args: args{
 				ip: net.ParseIP("fd00::1"),
 			},
-			want: false,
+			v4: false,
+			v6: true,
 		},
 	}
 	for _, tt := range tests {
 		got := IsIPv4(tt.args.ip)
-		c.Assert(got, checker.DeepEquals, tt.want, Commentf("Test Name: %s", tt.name))
+		c.Assert(got, checker.DeepEquals, tt.v4, Commentf("v4 test Name: %s", tt.name))
+
+		got = IsIPv6(tt.args.ip)
+		c.Assert(got, checker.DeepEquals, tt.v6, Commentf("v6 test Name: %s", tt.name))
+	}
+}
+
+func (s *IPTestSuite) TestIPListEquals(c *C) {
+	ips := []net.IP{net.ParseIP("1.1.1.1"), net.ParseIP("fd00::1"), net.ParseIP("8.8.8.8")}
+	sorted := []net.IP{net.ParseIP("1.1.1.1"), net.ParseIP("8.8.8.8"), net.ParseIP("fd00::1")}
+
+	sortedIPs := getSortedIPList(ips)
+	c.Assert(SortedIPListsAreEqual(sorted, sortedIPs), checker.Equals, true)
+
+	c.Assert(UnsortedIPListsAreEqual(ips, sorted), checker.Equals, true)
+}
+
+func (s *IPTestSuite) TestGetIPFromListByFamily(c *C) {
+	tests := []struct {
+		name          string
+		ips           []net.IP
+		needsV4Family bool
+		wants         net.IP
+	}{
+		{
+			name:          "test-1",
+			ips:           []net.IP{net.ParseIP("1.1.1.1"), net.ParseIP("fd00::1"), net.ParseIP("8.8.8.8")},
+			needsV4Family: true,
+			wants:         net.ParseIP("1.1.1.1"),
+		},
+		{
+			name:          "test-2",
+			ips:           []net.IP{net.ParseIP("1.1.1.1"), net.ParseIP("fd00::1"), net.ParseIP("8.8.8.8")},
+			needsV4Family: false,
+			wants:         net.ParseIP("fd00::1"),
+		},
+		{
+			name:          "test-2",
+			ips:           []net.IP{net.ParseIP("1.1.1.1"), net.ParseIP("8.8.8.8")},
+			needsV4Family: false,
+			wants:         nil,
+		},
+	}
+
+	for _, tt := range tests {
+		got := GetIPFromListByFamily(tt.ips, tt.needsV4Family)
+		c.Assert(got.String(), checker.DeepEquals, tt.wants.String(), Commentf("Test Name: %s", tt.name))
+	}
+}
+
+func (s *IPTestSuite) TestGetIPAtIndex(c *C) {
+	type args struct {
+		cidr  string
+		index int64
+		want  net.IP
+	}
+
+	tests := []args{
+		{
+			cidr:  "10.0.0.0/29",
+			index: -1,
+			want:  net.ParseIP("10.0.0.7"),
+		}, {
+			cidr:  "10.0.0.0/29",
+			index: 0,
+			want:  net.ParseIP("10.0.0.0"),
+		}, {
+			cidr:  "10.0.0.0/29",
+			index: 1,
+			want:  net.ParseIP("10.0.0.1"),
+		}, {
+			cidr:  "10.0.0.16/28",
+			index: -3,
+			want:  net.ParseIP("10.0.0.29"),
+		}, {
+			cidr:  "10.0.0.0/29",
+			index: -3,
+			want:  net.ParseIP("10.0.0.5"),
+		}, {
+			cidr:  "10.0.0.0/25",
+			index: -3,
+			want:  net.ParseIP("10.0.0.125"),
+		}, {
+			cidr:  "10.0.0.128/25",
+			index: -3,
+			want:  net.ParseIP("10.0.0.253"),
+		}, {
+			cidr:  "10.0.8.0/21",
+			index: -3,
+			want:  net.ParseIP("10.0.15.253"),
+		}, {
+			cidr:  "fd00::/64",
+			index: -3,
+			want:  net.ParseIP("fd00::ffff:ffff:ffff:fffd"),
+		},
+	}
+	for _, tt := range tests {
+		_, ipNet, _ := net.ParseCIDR(tt.cidr)
+		if got := GetIPAtIndex(*ipNet, tt.index); !got.Equal(tt.want) {
+			c.Errorf("GetIPAtIndex() = %v, want %v", got, tt.want)
+		}
+
 	}
 }

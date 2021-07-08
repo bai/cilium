@@ -15,9 +15,7 @@ a highly available, certified Kubernetes distribution designed for production
 workloads in unattended, resource-constrained, remote locations or inside IoT
 appliances.
 
-This guide assumes installation on amd64 architecture. Cilium is presently
-supported on amd64 architecture with `ARM support planned <https://github.com/cilium/cilium/issues/9898>`_
-for a future release.
+Cilium is presently supported on amd64 and arm64 architectures.
 
 Install a Master Node
 =====================
@@ -25,9 +23,9 @@ Install a Master Node
 The first step is to install a K3s master node making sure to disable support
 for the default CNI plugin:
 
-.. parsed-literal::
+.. code-block:: shell-session
 
-    curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC='--flannel-backend=none --no-flannel' sh -
+    curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC='--flannel-backend=none' sh -
 
 Install Agent Nodes (Optional)
 ==============================
@@ -40,9 +38,9 @@ node using a node-token which can be found on the master node at
 Install K3s on agent nodes and join them to the master node making sure to
 replace the variables with values from your environment:
 
-.. parsed-literal::
+.. code-block:: shell-session
 
-    curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC='--disable-network-policy --no-flannel' K3S_URL='https://${MASTER_IP}:6443' K3S_TOKEN=${NODE_TOKEN} sh -
+    curl -sfL https://get.k3s.io | K3S_URL='https://${MASTER_IP}:6443' K3S_TOKEN=${NODE_TOKEN} sh -
 
 Should you encounter any issues during the installation, please refer to the
 :ref:`troubleshooting_k8s` section and / or seek help on the `Slack channel`.
@@ -53,20 +51,27 @@ you need to configure your Kubernetes cluster to operate with Cilium.
 Mount the eBPF Filesystem
 =========================
 On each node, run the following to mount the eBPF Filesystem:
-::
+
+.. code-block:: shell-session
 
      sudo mount bpffs -t bpf /sys/fs/bpf
 
-.. include:: quick-install.rst
-.. include:: k8s-install-restart-pods.rst
-.. include:: k8s-install-validate.rst
-.. include:: namespace-kube-system.rst
-.. include:: hubble-enable.rst
+Install Cilium
+==============
 
-Now that you have a Kubernetes cluster with Cilium up and running, you can take
-a couple of next steps to explore various capabilities:
+.. include:: cli-download.rst
 
-* :ref:`gs_http`
-* :ref:`gs_dns`
-* :ref:`gs_cassandra`
-* :ref:`gs_kafka`
+Install Cilium by running:
+
+.. code-block:: shell-session
+
+    cilium install
+
+Validate the Installation
+=========================
+
+.. include:: cli-status.rst
+.. include:: cli-connectivity-test.rst
+
+.. include:: next-steps.rst
+
