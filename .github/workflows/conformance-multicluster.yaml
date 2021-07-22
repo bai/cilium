@@ -23,6 +23,12 @@ on:
   # pull_request: {}
   ###
 
+# By specifying the access of one of the scopes, all of those that are not
+# specified are set to 'none'.
+permissions:
+  # So that Sibz/github-status-action can write into the status API
+  statuses: write
+
 concurrency:
   # Structure:
   # - Workflow name
@@ -155,9 +161,12 @@ jobs:
 
       - name: Install Cilium CLI
         run: |
-          curl -LO https://github.com/cilium/cilium-cli/releases/download/v0.8.3/cilium-linux-amd64.tar.gz
-          sudo tar xzvfC cilium-linux-amd64.tar.gz /usr/bin
-          rm cilium-linux-amd64.tar.gz
+          export CILUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/master/stable.txt)
+          curl -sSL --remote-name-all https://github.com/cilium/cilium-cli/releases/download/$CILUM_CLI_VERSION/cilium-linux-amd64.tar.gz{,.sha256sum}
+          sha256sum --check cilium-linux-amd64.tar.gz.sha256sum
+          sudo tar xzvfC cilium-linux-amd64.tar.gz /usr/local/bin
+          rm cilium-linux-amd64.tar.gz{,.sha256sum}
+          cilium version
 
       - name: Set up gcloud CLI
         uses: google-github-actions/setup-gcloud@daadedc81d5f9d3c06d2c92f49202a3cc2b919ba
@@ -277,7 +286,7 @@ jobs:
         run: |
           cilium hubble port-forward --context ${{ steps.contexts.outputs.context1 }}&
           sleep 10s
-          [[ $(pgrep -f "cilium hubble port-forward|kubectl port-forward.*hubble-relay" | wc -l) == 2 ]]
+          [[ $(pgrep -f "cilium.*hubble.*port-forward|kubectl.*port-forward.*hubble-relay" | wc -l) == 2 ]]
 
       - name: Run connectivity test
         run: |
@@ -288,14 +297,12 @@ jobs:
              --flow-validation=disabled
 
       - name: Post-test information gathering
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         run: |
           cilium status --context ${{ steps.contexts.outputs.context1 }}
-          # FIXME: Use of timeout is a workaround for cilium/cilium-cli#384
-          timeout 5s cilium clustermesh status --context ${{ steps.contexts.outputs.context1 }}
+          cilium clustermesh status --context ${{ steps.contexts.outputs.context1 }}
           cilium status --context ${{ steps.contexts.outputs.context2 }}
-          # FIXME: Use of timeout is a workaround for cilium/cilium-cli#384
-          timeout 5s cilium clustermesh status --context ${{ steps.contexts.outputs.context2 }}
+          cilium clustermesh status --context ${{ steps.contexts.outputs.context2 }}
 
           curl -sLO https://github.com/cilium/cilium-sysdump/releases/latest/download/cilium-sysdump.zip
           kubectl config use-context ${{ steps.contexts.outputs.context1 }}
@@ -316,7 +323,7 @@ jobs:
         shell: bash {0} # Disable default fail-fast behaviour so that all commands run independently
 
       - name: Upload artifacts
-        if: ${{ failure() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@27121b0bdffd731efa15d66772be8dc71245d074
         with:
           name: cilium-sysdump-out.zip
@@ -359,7 +366,7 @@ jobs:
           target_url: ${{ env.check_url }}
 
       - name: Send slack notification
-        if: ${{ (cancelled() || failure()) && (github.event_name == 'schedule' || github.event_name == 'push') }}
+        if: ${{ !success() && (github.event_name == 'schedule' || github.event_name == 'push') }}
         uses: 8398a7/action-slack@dcc8c8e9dd8802e21a712dc0c003db97b42efe43
         with:
           status: ${{ job.status }}

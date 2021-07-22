@@ -55,6 +55,7 @@ var _ = Describe("K8sDatapathConfig", func() {
 
 	AfterAll(func() {
 		deploymentManager.DeleteCilium()
+		kubectl.RedeployDNS()
 		kubectl.CloseSSHClient()
 	})
 
@@ -337,9 +338,6 @@ var _ = Describe("K8sDatapathConfig", func() {
 			// Needed to bypass bug with masquerading when devices are set. See #12141.
 			if helpers.DoesNotRunWithKubeProxyReplacement() {
 				options["masquerade"] = "false"
-				// This test fails if the hostfw is enabled (and devices specified).
-				// See #12205 for details.
-				options["hostFirewall"] = "false"
 			}
 			deploymentManager.DeployCilium(options, DeployCiliumOptionsAndDNS)
 
@@ -701,17 +699,6 @@ var _ = Describe("K8sDatapathConfig", func() {
 	SkipContextIf(func() bool {
 		return helpers.RunsOnGKE() || helpers.RunsWithoutKubeProxy()
 	}, "Transparent encryption DirectRouting", func() {
-		AfterFailed(func() {
-			k8s1NodeName, _ := kubectl.GetNodeInfo(helpers.K8s1)
-			k8s2NodeName, _ := kubectl.GetNodeInfo(helpers.K8s2)
-			for _, node := range []string{k8s1NodeName, k8s2NodeName} {
-				for _, cmd := range []string{"ip a", "ip r"} {
-					res := kubectl.ExecInHostNetNS(context.TODO(), node, cmd)
-					GinkgoPrint(fmt.Sprintf("Output of %s on %s:\n%s", cmd, node, res.CombineOutput().String()))
-				}
-			}
-		})
-
 		It("Check connectivity with transparent encryption and direct routing", func() {
 			privateIface, err := kubectl.GetPrivateIface()
 			Expect(err).Should(BeNil(), "Unable to determine private iface")
@@ -729,10 +716,7 @@ var _ = Describe("K8sDatapathConfig", func() {
 			Expect(testPodConnectivityAcrossNodes(kubectl)).Should(BeTrue(), "Connectivity test between nodes failed")
 		})
 
-		// This test is broken because of #12205. In short, when bpf_host is
-		// loading on the native device, the source identity of packet on the
-		// destination node is resolved to WORLD and policy enforcement fails.
-		XIt("Check connectivity with transparent encryption and direct routing with bpf_host", func() {
+		SkipItIf(helpers.RunsWithoutKubeProxy, "Check connectivity with transparent encryption and direct routing with bpf_host", func() {
 			privateIface, err := kubectl.GetPrivateIface()
 			Expect(err).Should(BeNil(), "Unable to determine the private interface")
 			defaultIface, err := kubectl.GetDefaultIface()
@@ -747,6 +731,7 @@ var _ = Describe("K8sDatapathConfig", func() {
 				"encryption.ipsec.interface": privateIface,
 				"devices":                    devices,
 				"hostFirewall":               "false",
+				"kubeProxyReplacement":       "disabled",
 			}, DeployCiliumOptionsAndDNS)
 			Expect(testPodConnectivityAcrossNodes(kubectl)).Should(BeTrue(), "Connectivity test between nodes failed")
 		})

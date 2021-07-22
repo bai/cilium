@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	operatorMetrics "github.com/cilium/cilium/operator/metrics"
+	"github.com/cilium/cilium/operator/option"
 	operatorOption "github.com/cilium/cilium/operator/option"
 	apiMetrics "github.com/cilium/cilium/pkg/api/metrics"
 	azureAPI "github.com/cilium/cilium/pkg/azure/api"
@@ -28,6 +29,7 @@ import (
 	ipamMetrics "github.com/cilium/cilium/pkg/ipam/metrics"
 	"github.com/cilium/cilium/pkg/logging"
 	"github.com/cilium/cilium/pkg/logging/logfields"
+	"github.com/spf13/viper"
 )
 
 var log = logging.DefaultLogger.WithField(logfields.LogSubsys, "ipam-allocator-azure")
@@ -39,7 +41,7 @@ type AllocatorAzure struct{}
 func (*AllocatorAzure) Init(ctx context.Context) error { return nil }
 
 // Start kicks of the Azure IP allocation
-func (*AllocatorAzure) Start(getterUpdater ipam.CiliumNodeGetterUpdater) (allocator.NodeEventHandler, error) {
+func (*AllocatorAzure) Start(ctx context.Context, getterUpdater ipam.CiliumNodeGetterUpdater) (allocator.NodeEventHandler, error) {
 
 	var (
 		azMetrics azureAPI.MetricsAPI
@@ -48,10 +50,22 @@ func (*AllocatorAzure) Start(getterUpdater ipam.CiliumNodeGetterUpdater) (alloca
 
 	log.Info("Starting Azure IP allocator...")
 
+	var azureCloudName string
+	if viper.IsSet(option.AzureCloudName) {
+		azureCloudName = operatorOption.Config.AzureCloudName
+	} else {
+		log.Debug("Azure cloud name was not specified via CLI, retrieving it via Azure IMS")
+		var err error
+		azureCloudName, err = azureAPI.GetAzureCloudName(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("unsable to retrieve Azure cloud name: %w", err)
+		}
+	}
+
 	subscriptionID := operatorOption.Config.AzureSubscriptionID
 	if subscriptionID == "" {
 		log.Debug("SubscriptionID was not specified via CLI, retrieving it via Azure IMS")
-		subID, err := azureAPI.GetSubscriptionID(context.TODO())
+		subID, err := azureAPI.GetSubscriptionID(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("Azure subscription ID was not specified via CLI and retrieving it from the Azure IMS was not possible: %w", err)
 		}
@@ -62,7 +76,7 @@ func (*AllocatorAzure) Start(getterUpdater ipam.CiliumNodeGetterUpdater) (alloca
 	resourceGroupName := operatorOption.Config.AzureResourceGroup
 	if resourceGroupName == "" {
 		log.Debug("ResourceGroupName was not specified via CLI, retrieving it via Azure IMS")
-		rgName, err := azureAPI.GetResourceGroupName(context.TODO())
+		rgName, err := azureAPI.GetResourceGroupName(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("Azure resource group name was not specified via CLI and retrieving it from the Azure IMS was not possible: %w", err)
 		}
@@ -78,7 +92,7 @@ func (*AllocatorAzure) Start(getterUpdater ipam.CiliumNodeGetterUpdater) (alloca
 		iMetrics = &ipamMetrics.NoOpMetrics{}
 	}
 
-	azureClient, err := azureAPI.NewClient(operatorOption.Config.AzureCloudName, subscriptionID, resourceGroupName, operatorOption.Config.AzureUserAssignedIdentityID, azMetrics, operatorOption.Config.IPAMAPIQPSLimit, operatorOption.Config.IPAMAPIBurst, operatorOption.Config.AzureUsePrimaryAddress)
+	azureClient, err := azureAPI.NewClient(azureCloudName, subscriptionID, resourceGroupName, operatorOption.Config.AzureUserAssignedIdentityID, azMetrics, operatorOption.Config.IPAMAPIQPSLimit, operatorOption.Config.IPAMAPIBurst, operatorOption.Config.AzureUsePrimaryAddress)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create Azure client: %w", err)
 	}
@@ -88,7 +102,7 @@ func (*AllocatorAzure) Start(getterUpdater ipam.CiliumNodeGetterUpdater) (alloca
 		return nil, fmt.Errorf("unable to initialize Azure node manager: %w", err)
 	}
 
-	if err := nodeManager.Start(context.TODO()); err != nil {
+	if err := nodeManager.Start(ctx); err != nil {
 		return nil, err
 	}
 

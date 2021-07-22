@@ -753,7 +753,7 @@ func (kub *Kubectl) CountMissedTailCalls() (int, error) {
 			return -1, fmt.Errorf("Failed to run %s in pod %s: %s", cmd, ciliumPod, res.CombineOutput())
 		}
 		if res.Stdout() == "" {
-			return 0, nil
+			continue
 		}
 
 		for _, cnt := range res.ByLines() {
@@ -831,7 +831,10 @@ func (kub *Kubectl) ExecPodCmdContext(ctx context.Context, namespace string, pod
 // To receive the output of this function, the caller must invoke either
 // kub.WaitUntilFinish() or kub.WaitUntilMatch() then subsequently fetch the
 // output out of the result.
-func (kub *Kubectl) ExecPodCmdBackground(ctx context.Context, namespace string, pod string, cmd string, options ...ExecOptions) *CmdRes {
+func (kub *Kubectl) ExecPodCmdBackground(ctx context.Context, namespace string, pod, container string, cmd string, options ...ExecOptions) *CmdRes {
+	if container != "" {
+		pod += " -c " + container
+	}
 	command := fmt.Sprintf("%s exec -n %s %s -- %s", KubectlCmd, namespace, pod, cmd)
 	return kub.ExecInBackground(ctx, command, options...)
 }
@@ -1118,14 +1121,23 @@ func (kub *Kubectl) GetNodeIPByLabel(label string, external bool) (string, error
 
 func (kub *Kubectl) getIfaceByIPAddr(label string, ipAddr string) (string, error) {
 	cmd := fmt.Sprintf(
-		`ip -j a s  | jq -r '.[] | select(.addr_info[] | .local == "%s") | .ifname'`,
+		`ip -j a s | jq -r '.[] | select(.addr_info[] | .local == "%s") | .ifname'`,
 		ipAddr)
 	iface, err := kub.ExecInHostNetNSByLabel(context.TODO(), label, cmd)
 	if err != nil {
 		return "", fmt.Errorf("Failed to retrieve iface by IP addr: %s", err)
 	}
+	iface = strings.Trim(iface, "\n")
+	if iface == "" {
+		// In case of error, we want a copy of the ip a output in the logs.
+		ipa, err := kub.ExecInHostNetNSByLabel(context.TODO(), label, "ip -j a s")
+		if err != nil {
+			return "", fmt.Errorf("Failed to retrieve ip a output: %s", err)
+		}
+		return "", fmt.Errorf("Failed to retrieve iface by IP addr from: %s", ipa)
+	}
 
-	return strings.Trim(iface, "\n"), nil
+	return iface, nil
 }
 
 // GetServiceHostPort returns the host and the first port for the given service name.
@@ -3147,7 +3159,7 @@ func (kub *Kubectl) CiliumReport(commands ...string) {
 	ginkgoext.GinkgoPrint("Fetching command output from pods %s", pods)
 	for _, pod := range pods {
 		for _, cmd := range commands {
-			res = kub.ExecPodCmdBackground(ctx, CiliumNamespace, pod, cmd, ExecOptions{SkipLog: true})
+			res = kub.ExecPodCmdBackground(ctx, CiliumNamespace, pod, "cilium-agent", cmd, ExecOptions{SkipLog: true})
 			results = append(results, res)
 		}
 	}
@@ -3467,7 +3479,7 @@ func (kub *Kubectl) DumpCiliumCommandOutput(ctx context.Context, namespace strin
 				continue
 			}
 			//Remove bugtool artifact, so it'll be not used if any other fail test
-			_ = kub.ExecPodCmdBackground(ctx, namespace, pod, fmt.Sprintf("rm /tmp/%s", line))
+			_ = kub.ExecPodCmdBackground(ctx, namespace, pod, "cilium-agent", fmt.Sprintf("rm /tmp/%s", line))
 		}
 
 	}
@@ -4106,9 +4118,9 @@ func (kub *Kubectl) HubbleObserve(pod string, args string) *CmdRes {
 }
 
 // HubbleObserveFollow runs `hubble observe --follow --output=json <args>` on
-// 'ns/pod' in the background. The process is stopped when ctx is cancelled.
+// the Cilium pod 'ns/pod' in the background. The process is stopped when ctx is cancelled.
 func (kub *Kubectl) HubbleObserveFollow(ctx context.Context, pod string, args string) *CmdRes {
-	return kub.ExecPodCmdBackground(ctx, CiliumNamespace, pod, fmt.Sprintf("hubble observe --follow --output=json %s", args))
+	return kub.ExecPodCmdBackground(ctx, CiliumNamespace, pod, "cilium-agent", fmt.Sprintf("hubble observe --follow --output=json %s", args))
 }
 
 // WaitForIPCacheEntry waits until the given ipAddr appears in "cilium bpf ipcache list"

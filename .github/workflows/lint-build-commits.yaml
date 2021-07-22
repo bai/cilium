@@ -3,6 +3,8 @@ name: build-commits
 # Any change in triggers needs to be reflected in the concurrency group.
 on: [pull_request]
 
+permissions: read-all
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
@@ -31,7 +33,7 @@ jobs:
           key: llvm-10.0
 
       - name: Install LLVM and Clang
-        uses: KyleMayes/install-llvm-action@94441eb6f611486ec059130719cca525263ac2be
+        uses: KyleMayes/install-llvm-action@3c8956ce3469123af1c39125f684835e56ac58ee
         with:
           version: "10.0"
           directory: $HOME/.clang
@@ -107,7 +109,7 @@ jobs:
         run: git --no-pager log --format=%B -n 1
 
       - name: Send slack notification
-        if: ${{ (cancelled() || failure()) && (github.event_name == 'schedule' || github.event_name == 'push') }}
+        if: ${{ !success() && (github.event_name == 'schedule' || github.event_name == 'push') }}
         uses: 8398a7/action-slack@dcc8c8e9dd8802e21a712dc0c003db97b42efe43
         with:
           status: ${{ job.status }}

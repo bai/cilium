@@ -7,6 +7,8 @@ on:
     branches:
       - master
 
+permissions: read-all
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.after }}
   cancel-in-progress: true
@@ -46,7 +48,7 @@ jobs:
       - name: Run checkpatch.pl
         uses: docker://quay.io/cilium/cilium-checkpatch:514a240252e61d47b8814a5e57843505c0325b77@sha256:f88bbc4dbd8ace809c84581fae8b2dbbbc89433d641f1edf0f892d92be996020
       - name: Send slack notification
-        if: ${{ (cancelled() || failure()) && (github.event_name == 'schedule' || github.event_name == 'push') }}
+        if: ${{ !success() && (github.event_name == 'schedule' || github.event_name == 'push') }}
         uses: 8398a7/action-slack@dcc8c8e9dd8802e21a712dc0c003db97b42efe43
         with:
           status: ${{ job.status }}
@@ -68,7 +70,7 @@ jobs:
         with:
           entrypoint: ./contrib/coccinelle/check-cocci.sh
       - name: Send slack notification
-        if: ${{ (cancelled() || failure()) && (github.event_name == 'schedule' || github.event_name == 'push') }}
+        if: ${{ !success() && (github.event_name == 'schedule' || github.event_name == 'push') }}
         uses: 8398a7/action-slack@dcc8c8e9dd8802e21a712dc0c003db97b42efe43
         with:
           status: ${{ job.status }}
@@ -94,7 +96,7 @@ jobs:
           path: $HOME/.clang
           key: llvm-10.0
       - name: Install LLVM and Clang
-        uses: KyleMayes/install-llvm-action@94441eb6f611486ec059130719cca525263ac2be
+        uses: KyleMayes/install-llvm-action@3c8956ce3469123af1c39125f684835e56ac58ee
         with:
           version: "10.0"
           directory: $HOME/.clang
@@ -113,7 +115,7 @@ jobs:
         run: |
           make -C bpf go_prog_test || (echo "Run 'make -C bpf go_prog_test' locally to investigate failures"; exit 1)
       - name: Send slack notification
-        if: ${{ (cancelled() || failure()) && (github.event_name == 'schedule' || github.event_name == 'push') }}
+        if: ${{ !success() && (github.event_name == 'schedule' || github.event_name == 'push') }}
         uses: 8398a7/action-slack@dcc8c8e9dd8802e21a712dc0c003db97b42efe43
         with:
           status: ${{ job.status }}

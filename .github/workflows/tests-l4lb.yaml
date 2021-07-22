@@ -1,4 +1,4 @@
-name: Cilium L4LB XDP
+name: Cilium L4LB XDP (ci-l4lb)
 
 # Any change in triggers needs to be reflected in the concurrency group.
 on:
@@ -22,6 +22,12 @@ on:
   # 
   # pull_request: {}
   ###
+
+# By specifying the access of one of the scopes, all of those that are not
+# specified are set to 'none'.
+permissions:
+  # So that Sibz/github-status-action can write into the status API
+  statuses: write
 
 concurrency:
   # Structure:
@@ -156,7 +162,7 @@ jobs:
           target_url: ${{ env.check_url }}
 
       - name: Send slack notification
-        if: ${{ (cancelled() || failure()) && (github.event_name == 'schedule' || github.event_name == 'push') }}
+        if: ${{ !success() && (github.event_name == 'schedule' || github.event_name == 'push') }}
         uses: 8398a7/action-slack@dcc8c8e9dd8802e21a712dc0c003db97b42efe43
         with:
           status: ${{ job.status }}

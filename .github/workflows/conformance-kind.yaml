@@ -13,6 +13,8 @@ on:
       - 'Documentation/**'
       - 'test/**'
 
+permissions: read-all
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.after }}
   cancel-in-progress: true
@@ -50,9 +52,12 @@ jobs:
 
       - name: Install Cilium CLI
         run: |
-          curl -LO https://github.com/cilium/cilium-cli/releases/download/v0.8.3/cilium-linux-amd64.tar.gz
-          sudo tar xzvfC cilium-linux-amd64.tar.gz /usr/bin
-          rm cilium-linux-amd64.tar.gz
+          export CILUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/master/stable.txt)
+          curl -sSL --remote-name-all https://github.com/cilium/cilium-cli/releases/download/$CILUM_CLI_VERSION/cilium-linux-amd64.tar.gz{,.sha256sum}
+          sha256sum --check cilium-linux-amd64.tar.gz.sha256sum
+          sudo tar xzvfC cilium-linux-amd64.tar.gz /usr/local/bin
+          rm cilium-linux-amd64.tar.gz{,.sha256sum}
+          cilium version
 
       - name: Checkout kind config
         uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f
@@ -89,7 +94,7 @@ jobs:
         run: |
           cilium hubble port-forward&
           sleep 10s
-          [[ $(pgrep -f "cilium hubble port-forward|kubectl port-forward.*hubble-relay" | wc -l) == 2 ]]
+          [[ $(pgrep -f "cilium.*hubble.*port-forward|kubectl.*port-forward.*hubble-relay" | wc -l) == 2 ]]
 
       - name: Run connectivity test
         run: |
@@ -98,7 +103,7 @@ jobs:
       - name: Clean up Cilium
         run: |
           cilium uninstall --wait
-          pkill -f "cilium hubble port-forward|kubectl port-forward.*hubble-relay"
+          pkill -f "cilium.*hubble.*port-forward|kubectl.*port-forward.*hubble-relay"
 
       - name: Install Cilium with encryption
         run: |
@@ -117,14 +122,14 @@ jobs:
         run: |
           cilium hubble port-forward&
           sleep 10s
-          [[ $(pgrep -f "cilium hubble port-forward|kubectl port-forward.*hubble-relay" | wc -l) == 2 ]]
+          [[ $(pgrep -f "cilium.*hubble.*port-forward|kubectl.*port-forward.*hubble-relay" | wc -l) == 2 ]]
 
       - name: Run connectivity test
         run: |
           cilium connectivity test --force-deploy --flow-validation=disabled
 
       - name: Post-test information gathering
-        if: ${{ always() }}
+        if: ${{ !success() }}
         run: |
           cilium status
           kubectl get pods --all-namespaces -o wide
@@ -133,7 +138,7 @@ jobs:
         shell: bash {0} # Disable default fail-fast behaviour so that all commands run independently
 
       - name: Upload artifacts
-        if: ${{ always() }}
+        if: ${{ !success() }}
         uses: actions/upload-artifact@27121b0bdffd731efa15d66772be8dc71245d074
         with:
           name: cilium-sysdump-out.zip
@@ -141,7 +146,7 @@ jobs:
           retention-days: 5
 
       - name: Send slack notification
-        if: ${{ (cancelled() || failure()) && (github.event_name == 'schedule' || github.event_name == 'push') }}
+        if: ${{ !success() && (github.event_name == 'schedule' || github.event_name == 'push') }}
         uses: 8398a7/action-slack@dcc8c8e9dd8802e21a712dc0c003db97b42efe43
         with:
           status: ${{ job.status }}

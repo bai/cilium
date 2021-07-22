@@ -1181,7 +1181,7 @@ the usual workflow by adding ``-g`` for compilation.
 .. code-block:: shell-session
 
     $ clang -O2 -g -Wall -target bpf -c xdp-example.c -o xdp-example.o
-    $ llvm-objdump -S -no-show-raw-insn xdp-example.o
+    $ llvm-objdump -S --no-show-raw-insn xdp-example.o
 
     xdp-example.o:        file format ELF64-BPF
 
@@ -1219,7 +1219,7 @@ highly useful for analysis.
 As it can be seen in the verifier analysis, the ``llvm-objdump`` output dumps
 the same BPF assembler code as the kernel.
 
-Leaving out the ``-no-show-raw-insn`` option will also dump the raw
+Leaving out the ``--no-show-raw-insn`` option will also dump the raw
 ``struct bpf_insn`` as hex in front of the assembly:
 
 .. code-block:: shell-session
@@ -2734,14 +2734,14 @@ simplicity.
 
   .. code-block:: shell-session
 
-  # ip link set dev em1 xdp pinned /sys/fs/bpf/prog
+    # ip link set dev em1 xdp pinned /sys/fs/bpf/prog
 
   iproute2 can also use the short form that is relative to the detected mount
   point of the BPF file system:
 
   .. code-block:: shell-session
 
-  # ip link set dev em1 xdp pinned m:prog
+    # ip link set dev em1 xdp pinned m:prog
 
 When loading BPF programs, iproute2 will automatically detect the mounted
 file system instance in order to perform pinning of nodes. In case no mounted
